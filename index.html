@@ -11,18 +11,78 @@
 <body>
 <main>
   <nav class="tabs">
-    <img class="brand" src="logo.png" alt="Logo" height="32" width="32">
+    <button class="brand-link" type="button" data-tab="home" aria-label="Home" title="Home"><img class="brand" src="logo.png" alt="" height="32" width="32"></button>
     <div class="tabs-list" role="tablist">
       <button role="tab" data-tab="today" aria-selected="true">Today</button>
-      <button role="tab" data-tab="plan" aria-selected="false">Plan</button>
+      <button role="tab" data-tab="plan" aria-selected="false">Projects</button>
       <button role="tab" data-tab="bilan" aria-selected="false">Review</button>
       <button role="tab" data-tab="calendar" aria-selected="false">Calendar</button>
     </div>
   </nav>
 
   <div class="page">
-    <button id="brush" class="ghost brush" type="button" aria-label="Customize the banner" title="Customize the banner"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18.4 2.6a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/><path d="M7.5 13.5c-2.2 0-3.5 1.3-3.5 3.2 0 1.6-.8 2.6-2.5 3.3 2.6 1.3 6.5.9 7.9-1.6"/></svg></button>
     <h1 id="page-title"></h1>
+    <section id="home" hidden>
+      <div id="home-next"></div>
+      <header class="cover">
+        <p class="kicker">The Routine Issue</p>
+        <h2 class="cover-title">Six routines that run the week</h2>
+        <p class="dek">Short rituals, each one done on a page of this app. Open an article to read how.</p>
+      </header>
+      <nav class="contents" aria-label="In this issue">
+        <strong>In this issue</strong>
+        <ol>
+          <li><a href="#r-morning">Morning, five minutes</a></li>
+          <li><a href="#r-day">During the day</a></li>
+          <li><a href="#r-projects">Organise by project</a></li>
+          <li><a href="#r-blocks">Block your time</a></li>
+          <li><a href="#r-evening">Evening, five minutes</a></li>
+          <li><a href="#r-review">The Friday review</a></li>
+        </ol>
+      </nav>
+      <article class="story" id="r-morning">
+        <details>
+          <summary><span class="kicker">Morning · 5 min</span><strong class="headline">Choose the day before it chooses you</strong><span class="dek">Check energy and mood, then pick one big, up to three medium and up to five small tasks.</span></summary>
+          <p>Start on Today. The energy and mood scale tells you how heavy the day should be. A low score keeps the day light without forbidding anything. Then fill the slots: one big task, up to three medium, up to five small. The ring at the top shows the time you have spent.</p>
+          <button class="ghost" type="button" data-go="today">Go to Today</button>
+        </details>
+      </article>
+      <article class="story" id="r-day">
+        <details>
+          <summary><span class="kicker">During the day</span><strong class="headline">Write it down, time it, finish it</strong><span class="dek">Every task gets a duration and a priority. Keep at most two in progress.</span></summary>
+          <p>On Projects › Tasks, write each task as it comes. Give it a duration in minutes and a priority from the Eisenhower matrix. Start the timer on the task you are doing. The Kanban rules at the top of the page keep you to two tasks in progress. A blocked task keeps its reason.</p>
+          <button class="ghost" type="button" data-go="plan">Go to Projects</button>
+        </details>
+      </article>
+      <article class="story" id="r-projects">
+        <details>
+          <summary><span class="kicker">Organise</span><strong class="headline">A project is a sentence with a next step</strong><span class="dek">Group tasks into projects and sections, and name one next action of 30 minutes or less.</span></summary>
+          <p>On Projects › Sections and Projects, each project holds sections, and each section holds tasks. The progress block shows what is done and what is left. A next action starts with a verb, so you know where to begin.</p>
+          <button class="ghost" type="button" data-go="plan">Go to Projects</button>
+        </details>
+      </article>
+      <article class="story" id="r-blocks">
+        <details>
+          <summary><span class="kicker">Calendar</span><strong class="headline">Protect the hours that matter</strong><span class="dek">Reserve a slot for each type of work, and treat it like an appointment.</span></summary>
+          <p>On Calendar, click a day to see its hours. Draw a block for each kind of work and drop a task onto it. The time-blocking method is explained at the bottom of the page.</p>
+          <button class="ghost" type="button" data-go="calendar">Go to Calendar</button>
+        </details>
+      </article>
+      <article class="story" id="r-evening">
+        <details>
+          <summary><span class="kicker">Evening · 5 min</span><strong class="headline">Three lines, then close the day</strong><span class="dek">What got done, what is left, one thing you are grateful for.</span></summary>
+          <p>At the end of Today, open the end-of-day ritual. Write the three lines, then call it a day. The day is saved, and it appears in your calendar and your review.</p>
+          <button class="ghost" type="button" data-go="today">Go to Today</button>
+        </details>
+      </article>
+      <article class="story" id="r-review">
+        <details>
+          <summary><span class="kicker">Friday · 20 min</span><strong class="headline">Look back, then plan the next week</strong><span class="dek">Five review questions, the Eisenhower matrix for next week, and a note in the journal.</span></summary>
+          <p>On Review, answer the five questions, prepare the week in the Eisenhower matrix, and write a line in the journal. Export a backup while you are there.</p>
+          <button class="ghost" type="button" data-go="bilan">Go to Review</button>
+        </details>
+      </article>
+    </section>
     <section id="today"></section>
     <section id="plan" hidden>
       <div class="subtabs" role="tablist" data-group="plan">
@@ -36,10 +96,8 @@
     </section>
     <section id="bilan" hidden>
       <div class="subtabs" role="tablist" data-group="bilan">
-        <button role="tab" data-sub="review" aria-selected="true">Review</button>
-        <button role="tab" data-sub="week" aria-selected="false">Week</button>
+        <button role="tab" data-sub="week" aria-selected="true">Week</button>
       </div>
-      <section id="review" hidden></section>
       <section id="week" hidden></section>
     </section>
     <section id="calendar" hidden></section>

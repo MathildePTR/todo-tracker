@@ -1,6 +1,6 @@
 const KEY = 'habit-tracker-v1';
 // Statuts et types de projet (sprint 6) : 3 projets actifs au maximum
-const STATUSES = [['active', 'Active'], ['recurring', 'Recurring'], ['waiting', 'Waiting'], ['dormant', 'Dormant'], ['done', 'Done']];
+const STATUSES = [['finished', 'Finished'], ['break', 'Break']]; // un projet est soit terminé, soit en pause
 const TYPES = [['internal', 'Internal project'], ['training', 'Training'], ['pro', 'Work project'], ['ideas', 'Ideas']];
 const MAX_ACTIVE = 3;
 // Matrice d'Eisenhower : une case par tâche, ou aucune tant qu'elle n'est pas triée
@@ -17,19 +17,13 @@ const SLOTS = { L: 1, M: 3, S: 5 };
 
 const SLOT_FULL = { L: 'its big task', M: 'its 3 medium tasks', S: 'its 5 small tasks' };
 const DURATIONS = [['', 'Duration'],['15', '15 min'], ['30', '30 min'], ['45', '45 min'], ['60', '1 h'], ['90', '1 h 30'], ['120', '2 h']];
-// Méthodes de productivité et de coaching, à attacher à un projet. Chaque méthode donne une question et des étapes.
-const METHODS = [
-  { id: 'gtd', name: 'GTD', what: 'Capture, clarify, organise, review, act: keep nothing in your head.', steps: ['Write down everything that needs your attention, in the inbox', 'For each item: is it actionable? If so, what is the next action?', 'Put it in the right project', 'Review it every week', 'Act according to context and available time'] },
-  { id: 'kanban', name: 'Kanban', what: 'See the workflow, and limit what is in progress.', steps: ['Three columns: to do, in progress, done', 'Two tasks in progress at most', 'Finish a task before starting another'] },
-  { id: 'para', name: 'PARA', what: 'Sort by use: Projects, Areas, Resources, Archives.', steps: ['Project: has an end and a date', 'Area: an ongoing responsibility', 'Resource: a topic you care about', 'Archive: finished or paused'] },
-  { id: 'blocks', name: 'Time blocking', what: 'Reserve a slot in your calendar for each type of work.', steps: ['List the types of work in the project', 'Block a slot for each one', 'Treat the slot like an appointment'] },
-];
+// Time blocking : affiché dans l'onglet Calendar
+const TIME_BLOCKING = { name: 'Time blocking', what: 'Reserve a slot in your calendar for each type of work.', steps: ['List the types of work in the project', 'Block a slot for each one', 'Treat the slot like an appointment'] };
 // Contexte ou énergie d'une tâche, pour choisir selon l'état du moment
 const CONTEXTS = [['', 'Context'], ['5min', '5 minutes'], ['deep', 'Focus work'], ['phone', 'Phone'], ['low', 'Low energy']];
 // Contextes et catégories de projet : personnalisables (state.contexts, state.types). Les listes ci-dessus sont les défauts.
 const ctxOptions = () => [['', 'Contexte'], ...state.contexts.map(c => [c.id, c.name])];
 const filterOptions = () => [['', 'All contexts'],...state.contexts.map(c => [c.id, c.name])];
-const typeOptions = () => state.types.map(c => [c.id, c.name]);
 const ctxName = id => state.contexts.find(c => c.id === id)?.name || '';
 // Saisie d'un nom à côté d'une liste : remplace prompt(), que le navigateur peut bloquer
 function askName(anchor, label, onName, verb = 'Create') {
@@ -69,7 +63,6 @@ function ctxPicker(name, picked, label) {
   });
   return sel;
 }
-const typeName = id => state.types.find(c => c.id === id)?.name || '';
 let ctxFilter = '', weekOffset = 0;
 // Minuteurs (sprint 6) : focus de 60 à 90 min, plage d'urgence de 30 à 45 min ; « + 15 min » prolonge jusqu'au plafond
 const TIMER = { focus: { label: 'Timer', start: 60, max: 90 }, urgent: { label: 'Urgent block', start: 30, max: 45 } };
@@ -82,8 +75,6 @@ const MODE_HELP = {
   tasks: 'Each time, the tasks below are added to a "Routines" section of the project. The section stays the same.',
 };
 const DAY_LETTERS = [[1, 'Lun'], [2, 'Mar'], [3, 'Mer'], [4, 'Jeu'], [5, 'Ven'], [6, 'Sam'], [0, 'Dim']];
-// Routine de recherche active (sprint 4), proposée d'un clic puis modifiable
-const ROUTINE = [[1, 'Finish the Palmeraie sprint'], [2, 'Create LinkedIn content on what I learned'], [3, 'Add a proof of reliability'], [4, 'Comment on LinkedIn'], [5, 'Create Substack content']];
 // Revue du vendredi (sprint 6)
 const QUESTIONS = ['What is finished?', 'What is moving forward?', 'What is waiting on someone?', 'Which proof of reliability do I add?', 'What are my 3 priorities for next week?'];
 const INBOX = { inbox: true, name: 'Inbox' }; // faux projet qui porte la boîte de réception
@@ -125,7 +116,7 @@ function normalize(st) {
   if (!st.days || typeof st.days !== 'object') st.days = {}; // rituels, jour par jour
   if (!Array.isArray(st.reviews)) st.reviews = []; // revues du vendredi
   if (!Array.isArray(st.log)) st.log = []; // temps mesuré par les minuteurs
-  if (!Array.isArray(st.customTools)) st.customTools = []; // outils créés par toi
+  st.customTools = []; // outils personnels supprimés
   if (!Array.isArray(st.contexts) || !st.contexts.length) st.contexts = CONTEXTS.slice(1).map(([id, name]) => ({ id, name }));
   // Catégories : seulement celles créées par l'utilisateur. Les anciennes valeurs par défaut sont retirées, sauf si un projet les utilise encore
   const usedTypes = new Set((st.projects || []).map(p => p.type));
@@ -146,8 +137,7 @@ function normalize(st) {
       p.sections = p.tasks?.length ? [{ id: uid(), name: 'General', tasks: p.tasks }] : [];
       delete p.tasks;
     }
-    p.status = { doing: 'active', todo: 'waiting' }[p.status] || p.status; // anciens statuts
-    if (!STATUSES.some(([v]) => v === p.status)) p.status = 'waiting';
+    p.status = p.status === 'done' ? 'finished' : 'break'; // anciens statuts
     if (p.type && !st.types.some(c => c.id === p.type)) p.type = '';
   });
   return st;
@@ -287,26 +277,6 @@ const arrows = (list, item) => [
 const editButton = (id, label) =>
   h('button', { class: 'icon', 'aria-label': label, title: 'Edit', onclick: () => { editing = id; render(); } }, '✎');
 
-// Outils : la bibliothèque intégrée, plus ceux que tu crées. Un outil peut poser des questions (fields),
-// dont les réponses sont gardées sur l'élément auquel il est attaché.
-const MORE_TOOLS = [
-];
-const FIELDS = {};
-const EXTRA_TOOLS = [
-];
-// Catégorie par défaut, et sections que l'outil peut créer dans un projet
-const CATS = { blocks: 'Plan', kanban: 'Plan', gtd: 'Plan', para: 'Plan' };
-const SECTIONS = { kanban: ['À faire', 'En cours', 'Fait'], gtd: ['Capturer', 'Clarifier', 'Organiser', 'Revoir', 'Agir'], para: ['Projets', 'Domaines', 'Ressources', 'Archives'] };
-const DEFAULT_CATS = ['Plan'];
-const allTools = () => [...METHODS, ...MORE_TOOLS, ...EXTRA_TOOLS, ...(state.customTools || [])]
-  .map(t => ({
-    ...t,
-    fields: t.fields || FIELDS[t.id] || [],
-    steps: t.steps || [],
-    sections: t.sections || SECTIONS[t.id] || [],
-    cat: (state.toolCats || {})[t.id] || t.cat || CATS[t.id] || 'Other',
-  }));
-const toolById = id => allTools().find(t => t.id === id);
 // Liste déroulante groupée par catégorie
 function toolOptions(list) {
   return [...new Set(list.map(t => t.cat))].map(c =>
@@ -319,76 +289,6 @@ function scaffold(p, t) {
   missing.forEach(n => p.sections.push({ id: uid(), name: n, tasks: [] }));
   save();
   toast(missing.length ? `Sections created: ${missing.join(', ')}.` : 'These sections already exist in this project.');
-}
-// Outils du projet : c'est ici qu'on les ajoute pour construire ensuite ses sections et ses tâches
-function projectTools(p) {
-  p.tools ||= [];
-  p.answers ||= {};
-  const chosen = p.tools.map(toolById).filter(Boolean);
-  const free = allTools().filter(t => !p.tools.includes(t.id));
-  return h('div', { class: 'ptools' },
-    h('strong', {}, 'Project tools'),
-    h('p', { class: 'muted' }, 'The tools that frame this project. Those that propose sections can create them in one click.'),
-    free.length ? h('select', { 'aria-label': 'Add a tool to the project', class: 'addm', onchange: e => {
-      if (!e.target.value) return;
-      p.tools.push(e.target.value);
-      save();
-    } }, h('option', { value: '' }, 'Add a tool…'), toolOptions(free)) : null,
-    chosen.map(t => h('div', {},
-      t.sections.length ? h('div', { class: 'row' },
-        h('button', { class: 'ghost', onclick: () => scaffold(p, t) }, `Create sections: ${t.sections.join(' · ')}`)) : null,
-      toolCard(p, t))));
-}
-
-// Un outil attaché à un élément : description, étapes, et questions à remplir
-// Une étape devient une tâche : dans la section si l'élément en est une, sinon dans la boîte de réception
-function stepToTask(obj, t, i) {
-  const dest = Array.isArray(obj.tasks) ? obj : state.inbox;
-  dest.tasks.push({ id: uid(), text: `${t.steps[i]} · ${t.name}`, done: false });
-  save();
-  toast(dest === state.inbox ? 'Step added to the inbox.' : 'Step added to the section.');
-}
-function toolCard(obj, t) {
-  const ans = obj.answers[t.id] ||= [];
-  const prog = ((obj.progress ||= {})[t.id] ||= []); // étapes cochées
-  const doneN = t.steps.filter((_, i) => prog[i]).length;
-  return h('div', { class: 'technique' },
-    h('div', { class: 'row' }, h('strong', {}, t.name),
-      t.steps.length ? h('span', { class: 'muted' }, `${doneN}/${t.steps.length}`) : null,
-      h('button', { class: 'icon', 'aria-label': `Remove the tool ${t.name}`, onclick: () => { obj.tools = obj.tools.filter(x => x !== t.id); save(); } }, '×')),
-    t.what ? h('p', { class: 'muted' }, t.what) : null,
-    t.fields.map((label, i) => h('div', { class: 'smart' },
-      h('span', { class: 'muted' }, label),
-      bind('input', ans, i, { type: 'text', maxlength: 200, 'aria-label': `${t.name} : ${label}` }))),
-    t.steps.length ? h('ol', { class: 'steps' }, t.steps.map((s, i) => h('li', { class: prog[i] ? 'ok' : '' },
-      h('label', {},
-        h('input', { type: 'checkbox', checked: !!prog[i], 'aria-label': `Step done: ${s}`, onchange: () => { prog[i] = !prog[i]; save(); } }),
-        h('span', {}, s)),
-      h('button', { class: 'ghost', type: 'button', 'aria-label': `Turn into a task: ${s}`, onclick: () => stepToTask(obj, t, i) }, '→ task')))) : null);
-}
-// Panneau d'outils, pour un projet, une section ou une tâche
-function toolPanel(obj, label, art = 'ce') {
-  obj.tools ||= [];
-  obj.answers ||= {};
-  const chosen = obj.tools.map(toolById).filter(Boolean);
-  const free = allTools().filter(t => !obj.tools.includes(t.id));
-  return h('details', foldable('tool-' + obj.id, { class: 'tool-panel' }),
-    h('summary', {}, chosen.length ? `Tools · ${chosen.map(t => t.name).join(', ')}` : `Add tools to ${art} ${label}`),
-    free.length ? h('select', { 'aria-label': `Add a tool to ${art} ${label}`, class: 'addm', onchange: e => {
-      if (!e.target.value) return;
-      obj.tools.push(e.target.value);
-      save();
-    } }, h('option', { value: '' }, 'Add a tool…'), toolOptions(free)) : null,
-    chosen.map(t => toolCard(obj, t)));
-}
-
-// Retire un outil de la bibliothèque personnelle, et de tous les éléments qui l'utilisent
-function removeCustomTool(id) {
-  state.customTools = state.customTools.filter(t => t.id !== id);
-  const items = [state.inbox, ...state.projects, ...state.projects.flatMap(p => p.sections)];
-  items.forEach(x => { if (x.tools) x.tools = x.tools.filter(t => t !== id); });
-  state.projects.flatMap(p => p.sections).concat(state.inbox).forEach(s => s.tasks.forEach(t => { if (t.tools) t.tools = t.tools.filter(x => x !== id); }));
-  save();
 }
 // Mes outils : créer les siens, avec ses étapes et ses questions
 // Liste modifiable (renommer, ajouter, supprimer). Une valeur déjà utilisée ne peut pas être supprimée.
@@ -420,66 +320,6 @@ function editableList(listKey, title, noun, field) {
     h('button', { class: 'btn' }, 'Add'));
   return h('div', { class: 'cat' }, h('strong', {}, title), h('ul', { class: 'secs' }, rows), add);
 }
-function settingsCard() {
-  return h('details', foldable('settings', { class: 'card stack library' }),
-    h('summary', {}, 'Project categories'),
-    h('p', { class: 'muted' }, 'Add, rename or delete your project categories.'),
-    editableList('types', 'Project categories', 'category', 'type'));
-}
-
-function libraryCard() {
-  const create = form(f => {
-    const name = f.elements.name.value.trim();
-    if (!name) return f.elements.name.focus();
-    state.customTools.push({
-      id: 'c-' + uid(), name, what: f.elements.what.value.trim(), cat: 'My tools',
-      steps: f.elements.steps.value.split('\n').map(x => x.trim()).filter(Boolean),
-      fields: f.elements.fields.value.split('\n').map(x => x.trim()).filter(Boolean),
-      sections: f.elements.sections.value.split('\n').map(x => x.trim()).filter(Boolean),
-    });
-    save();
-  },
-    h('input', { type: 'text', name: 'name', class: 'grow', placeholder: 'Tool name', maxlength: 60, 'aria-label': 'Tool name' }),
-    h('input', { type: 'text', name: 'what', class: 'grow', placeholder: 'What it is for', maxlength: 160, 'aria-label': 'Tool description' }),
-    h('textarea', { name: 'steps', placeholder: 'Steps, one per line (optional)', 'aria-label': 'Tool steps' }),
-    h('textarea', { name: 'fields', placeholder: 'Questions to answer, one per line (optional)', 'aria-label': 'Tool questions' }),
-    h('textarea', { name: 'sections', placeholder: 'Sections it creates, one per line (optional)', 'aria-label': 'Sections created by the tool' }),
-    h('button', { class: 'btn' }, 'Create tool'));
-
-  // Un outil, sa catégorie modifiable, et sa suppression s'il est personnel
-  const row = t => h('li', { class: 'lib' },
-    h('details', foldable('lib-' + t.id, { class: 'grow' }),
-      h('summary', {}, h('strong', {}, t.name), t.what ? h('span', { class: 'muted' }, ` · ${t.what}`) : null),
-      t.steps.length ? h('ol', { class: 'steps' }, t.steps.map(s => h('li', {}, s))) : null,
-      t.fields.length ? h('p', { class: 'muted' }, `Questions : ${t.fields.join(' · ')}`) : null,
-      t.sections.length ? h('p', { class: 'muted' }, `Suggested sections: ${t.sections.join(' · ')}`) : null),
-    h('select', { 'aria-label': `Category of ${t.name}`, onchange: e => {
-      const sel = e.target;
-      if (sel.value !== '__new') { state.toolCats[t.id] = sel.value; return save(); }
-      sel.value = t.cat;
-      askName(sel, 'Category name', c => { state.toolCats[t.id] = c; save(); });
-    } },
-      [...new Set([...DEFAULT_CATS, ...allTools().map(x => x.cat)])].map(c => h('option', { value: c, selected: c === t.cat }, c)),
-      h('option', { value: '__new' }, '+ New category…')),
-    t.id.startsWith('c-') ? h('button', { class: 'icon', 'aria-label': `Delete the tool ${t.name}`, onclick: () => {
-      if (confirm(`Delete the tool "${t.name}" wherever it is attached?`)) removeCustomTool(t.id);
-    } }, '×') : null);
-
-  const cats = [...new Set(allTools().map(t => t.cat))];
-  // Repliée par défaut : elle ne s'ouvre que si on la demande
-  return h('details', foldable('library', { class: 'card stack library' }),
-    h('summary', {}, 'Tool library'),
-    h('p', { class: 'muted' }, 'All tools, sorted by category. Change a tool\'s category if you file it differently. To use one, add it to a project under "Project tools".'),
-    cats.map(c => h('div', { class: 'cat' },
-      h('strong', {}, `${c} (${allTools().filter(t => t.cat === c).length})`),
-      h('ul', { class: 'secs' }, allTools().filter(t => t.cat === c).map(row)))),
-    h('details', foldable('create-tool'),
-      h('summary', {}, 'Create a personal tool'),
-      create));
-}
-
-// Déclencheur créé d'un clic depuis une tâche, une section ou un projet. Il se modifie ensuite dans Projects.
-// La première occurrence tombe la semaine suivante : la tâche ou la section existe déjà.
 function triggerFrom(p, origin) {
   const now = today();
   const tr = {
@@ -504,12 +344,145 @@ const recurButton = (p, origin, label) => h('button', {
   class: 'icon day', 'aria-label': `Create a recurrence: ${label}`, title: 'Create a recurrence',
   onclick: () => recurDialog(p, origin, label),
 }, 'Repeat');
-function deleteSection(p, s) {
-  if (s.tasks.length && !confirm(`Delete the section "${s.name}" and its ${plural(s.tasks.length, 'task')}?`)) return;
-  p.sections = p.sections.filter(x => x !== s);
-  save();
+// Suppression d'une section. S'il y a des tâches, on demande : les réattribuer à une autre section,
+// ou les supprimer aussi (il faut alors retaper le nom exact). « Undo » reste disponible après.
+function askDeleteSection(p, s) {
+  let dlg = document.getElementById('delete-dialog');
+  if (!dlg) { dlg = h('dialog', { id: 'delete-dialog', class: 'banner-picker', 'aria-label': 'Delete section' }); document.body.append(dlg); }
+  const undoable = (msg, mutate) => {
+    const snap = JSON.stringify(state);
+    mutate();
+    save();
+    dlg.close();
+    toast(msg, () => { state = JSON.parse(snap); save(); });
+  };
+  const closeBtn = h('button', { class: 'ghost', type: 'button', onclick: () => dlg.close() }, 'Cancel');
+
+  // 1) Réattribuer les tâches à une autre section (dans n'importe quel projet)
+  const targets = () => state.projects.flatMap(x => x.sections.filter(y => y !== s).map(y => ({ p: x, s: y })));
+  const projSel = h('select', { 'aria-label': 'Project for the tasks' });
+  const secSel = h('select', { 'aria-label': 'Section for the tasks' });
+  const fillSec = () => {
+    const pid = projSel.value;
+    const opts = targets().filter(x => x.p.id === pid);
+    secSel.replaceChildren(...opts.map(x => h('option', { value: x.s.id }, x.s.name)));
+    moveBtn.disabled = !opts.length;
+  };
+  const fillProj = () => {
+    const ps = [...new Set(targets().map(x => x.p))];
+    projSel.replaceChildren(...ps.map(x => h('option', { value: x.id }, x.name)));
+    fillSec();
+  };
+  projSel.addEventListener('change', fillSec);
+  const moveBtn = h('button', { class: 'btn', type: 'button', onclick: () => {
+    const dest = targets().find(x => x.s.id === secSel.value);
+    if (!dest) return;
+    undoable(`Section "${s.name}" deleted. Its tasks moved to "${dest.s.name}".`, () => {
+      dest.s.tasks.push(...s.tasks);
+      s.tasks = [];
+      p.sections = p.sections.filter(x => x !== s);
+    });
+  } }, 'Move tasks, then delete section');
+  fillProj();
+
+  // 2) Supprimer aussi les tâches : retaper le nom exact
+  const input = h('input', { type: 'text', placeholder: 'Type the exact name of the section', 'aria-label': 'Type the exact name of the section to confirm', autocomplete: 'off' });
+  const deleteBtn = h('button', { class: 'btn', type: 'button', disabled: true, onclick: () => {
+    undoable(`Section "${s.name}" and its tasks deleted.`, () => { p.sections = p.sections.filter(x => x !== s); });
+  } }, 'Delete section and tasks');
+  input.addEventListener('input', () => { deleteBtn.disabled = input.value.trim() !== s.name.trim(); });
+
+  const n = s.tasks.length;
+  dlg.replaceChildren(closeX(dlg),
+    h('strong', {}, `Delete the section "${s.name}"`),
+    ...(n === 0
+      ? [h('p', { class: 'muted' }, 'This section has no tasks. To confirm, type its exact name. You can undo right after.'), input, h('div', { class: 'row' }, deleteBtn, closeBtn)]
+      : [
+          h('p', { class: 'muted' }, `This section has ${plural(n, 'task')}. What should happen to them?`),
+          h('strong', {}, 'Move them to another section'),
+          targets().length
+            ? h('div', { class: 'row' }, projSel, secSel, moveBtn)
+            : h('p', { class: 'muted' }, 'There is no other section yet. Create one first, or delete the tasks below.'),
+          h('strong', {}, 'Or delete them too'),
+          h('p', { class: 'muted' }, 'To confirm, type the exact name of the section.'),
+          input,
+          h('div', { class: 'row' }, deleteBtn, closeBtn),
+        ]));
+  if (!dlg.open) dlg.showModal();
+  if (n === 0) input.focus();
+}
+function deleteSection(p, s) { askDeleteSection(p, s); }
+// Suppression d'un projet : même sécurité que pour une section. S'il a des sections, on demande
+// de les déplacer vers un autre projet (ou un nouveau), ou de tout supprimer en retapant le nom.
+function askDeleteProject(p) {
+  let dlg = document.getElementById('delete-dialog');
+  if (!dlg) { dlg = h('dialog', { id: 'delete-dialog', class: 'banner-picker', 'aria-label': 'Delete project' }); document.body.append(dlg); }
+  const undoable = (msg, mutate) => {
+    const snap = JSON.stringify(state); // pour « Undo »
+    mutate();
+    save();
+    dlg.close();
+    toast(msg, () => { state = JSON.parse(snap); save(); });
+  };
+  const closeBtn = h('button', { class: 'ghost', type: 'button', onclick: () => dlg.close() }, 'Cancel');
+  const others = state.projects.filter(x => x !== p);
+  const taskCount = p.sections.reduce((k, s) => k + s.tasks.length, 0);
+
+  // Tout supprimer : retaper le nom exact
+  const input = h('input', { type: 'text', placeholder: 'Type the exact name of the project', 'aria-label': 'Type the exact name of the project to confirm', autocomplete: 'off' });
+  const deleteBtn = h('button', { class: 'btn', type: 'button', disabled: true, onclick: () => {
+    undoable(`Project "${p.name}" deleted.`, () => { state.projects = state.projects.filter(x => x !== p); });
+  } }, 'Delete project and everything in it');
+  input.addEventListener('input', () => { deleteBtn.disabled = input.value.trim() !== p.name.trim(); });
+  const deleteBlock = [h('strong', {}, 'Or delete everything'),
+    h('p', { class: 'muted' }, `To confirm, type the exact name of the project. ${p.sections.length ? `Its ${plural(p.sections.length, 'section')} and ${plural(taskCount, 'task')} will be deleted too.` : ''}`),
+    input, h('div', { class: 'row' }, deleteBtn, closeBtn)];
+
+  // Sections sans tâches : une simple confirmation suffit
+  if (!p.sections.length) {
+    dlg.replaceChildren(closeX(dlg), h('strong', {}, `Delete the project "${p.name}"`), ...deleteBlock);
+  } else {
+    // Déplacer les sections vers un autre projet, ou vers un nouveau
+    const sel = h('select', { 'aria-label': 'Move the sections to' },
+      others.map(x => h('option', { value: x.id }, x.name)),
+      h('option', { value: '__new' }, '+ New project…'));
+    const newName = h('input', { type: 'text', placeholder: 'New project name *', maxlength: 80, 'aria-label': 'New project name' });
+    newName.hidden = others.length > 0;
+    if (!others.length) sel.value = '__new';
+    sel.addEventListener('change', () => { newName.hidden = sel.value !== '__new'; });
+    const moveBtn = h('button', { class: 'btn', type: 'button', onclick: () => {
+      let dest = null;
+      if (sel.value === '__new') {
+        const v = newName.value.trim();
+        if (!v) return toast('Name the new project first.');
+        const active = false;
+        dest = { id: uid(), name: v, status: active ? 'active' : 'waiting', type: '', due: '', sections: [], triggers: [], tools: [], answers: {} };
+      } else dest = others.find(x => x.id === sel.value);
+      if (!dest) return;
+      undoable(`Project "${p.name}" deleted. Its sections moved to "${dest.name}".`, () => {
+        if (sel.value === '__new') state.projects.push(dest);
+        dest.sections.push(...p.sections);
+        p.sections = [];
+        state.projects = state.projects.filter(x => x !== p);
+      });
+    } }, 'Move sections, then delete project');
+    dlg.replaceChildren(closeX(dlg), h('strong', {}, `Delete the project "${p.name}"`),
+      h('p', { class: 'muted' }, `It has ${plural(p.sections.length, 'section')}. What should happen to them?`),
+      h('strong', {}, 'Move them to another project'),
+      h('div', { class: 'row' }, sel, newName, moveBtn),
+      ...deleteBlock);
+  }
+  if (!dlg.open) dlg.showModal();
+  if (!p.sections.length) input.focus();
 }
 
+// Supprimer une tâche tout de suite, avec « Undo » pendant quelques secondes
+function deleteTaskWithUndo(t, s) {
+  const snap = JSON.stringify(state);
+  s.tasks = s.tasks.filter(x => x !== t);
+  save();
+  toast(`Task "${t.text}" deleted.`, () => { state = JSON.parse(snap); save(); });
+}
 // Suppression d'une tâche : avertissement, et il faut retaper le titre exact pour confirmer
 function askDeleteTask(t, s) {
   let dlg = document.getElementById('delete-dialog');
@@ -532,6 +505,58 @@ function askDeleteTask(t, s) {
   dlg.showModal();
   input.focus();
 }
+// Édition d'une tâche dans une fenêtre, comme les projets et les sections
+function editTaskDialog(t) {
+  const hit = findTask(t.id);
+  let dlg = document.getElementById('edit-task-dialog');
+  if (!dlg) { dlg = h('dialog', { id: 'edit-task-dialog', class: 'banner-picker', 'aria-label': 'Edit task' }); document.body.append(dlg); }
+  const text = h('input', { type: 'text', value: t.text, maxlength: 120, 'aria-label': 'Task name', class: 'grow' });
+  const mins = h('input', { type: 'number', min: 0, max: 1440, step: 5, value: t.mins || '', placeholder: 'Minutes', 'aria-label': 'Estimated duration in minutes' });
+  const quad = h('select', { 'aria-label': 'Priority (Eisenhower)' }, QUADS.map(([v, l]) => h('option', { value: v, selected: (t.quad || '') === v }, l)));
+  const tags = h('input', { type: 'text', value: (t.tags || []).join(', '), placeholder: 'Keywords, e.g. call, writing', maxlength: 120, 'aria-label': 'Keywords' });
+  const due = h('input', { type: 'date', value: t.due || '', 'aria-label': 'Due date (optional)' });
+  const save_ = h('button', { class: 'btn', type: 'button', onclick: () => {
+    const v = text.value.trim();
+    if (!v) return toast('Write the task name first.');
+    t.text = v;
+    t.mins = Number(mins.value) || 0;
+    t.quad = quad.value;
+    t.tags = normTags(tags.value);
+    t.due = due.value;
+    save();
+    dlg.close();
+  } }, 'Save');
+  dlg.replaceChildren(closeX(dlg), h('strong', {}, 'Edit task'),
+    h('label', { class: 'row' }, h('span', { class: 'muted' }, 'Name'), text),
+    h('label', { class: 'row' }, h('span', { class: 'muted' }, 'Duration (min)'), mins),
+    h('label', { class: 'row' }, h('span', { class: 'muted' }, 'Priority'), quad),
+    h('label', { class: 'row' }, h('span', { class: 'muted' }, 'Keywords'), tags),
+    h('label', { class: 'row' }, h('span', { class: 'muted' }, 'Due'), due),
+    h('div', { class: 'row' }, save_,
+      h('button', { class: 'ghost', type: 'button', onclick: () => { dlg.close(); if (hit) deleteTaskWithUndo(t, hit.s); } }, 'Delete task'),
+      h('button', { class: 'ghost', type: 'button', onclick: () => dlg.close() }, 'Cancel')));
+  if (!dlg.open) dlg.showModal();
+  text.focus();
+}
+// Une tâche dans une colonne de Today : taille et durée en haut, titre au milieu, barre de temps en bas
+const SIZE_NAME = { L: 'Big', M: 'Medium', S: 'Small' };
+const SIZE_RULE = { L: 'Big · 90 min or more', M: 'Medium · 30 to 90 min', S: 'Small · under 30 min' };
+function compactItem(t) {
+  const pct = t.mins ? Math.min(100, Math.round(((t.spent || 0) / t.mins) * 100)) : 0;
+  return h('li', { class: 'slot-task' + (t.done ? ' is-done' : ''), draggable: 'true', ondragstart: e => e.dataTransfer.setData('text/plain', t.id) },
+    h('div', { class: 'slot-top' },
+      h('span', { class: 'size' }, `${SIZE_NAME[sizeOf(t)] || ''} · ${t.mins ? hm(t.mins) : 'no time set'}`),
+      h('input', { type: 'checkbox', checked: !!t.done, 'aria-label': `Done: ${t.text}`, onchange: () => {
+        t.done = !t.done;
+        t.done ? t.doneAt = key(today()) : delete t.doneAt;
+        save();
+      } })),
+    h('span', { class: 'slot-title', style: 'cursor: pointer;', title: 'Open the timer', onclick: () => askFocus(t) }, t.text),
+    h('div', { class: 'slot-foot' },
+      h('span', { class: 'bar', 'aria-hidden': 'true' }, h('i', { style: `width: ${pct}%` })),
+      h('span', { class: 'start-link', role: 'link', tabindex: '0', 'aria-label': `Edit ${t.text}`, onclick: () => editTaskDialog(t) }, 'Edit'),
+      t.done ? null : h('span', { class: 'start-link', role: 'link', tabindex: '0', 'aria-label': `Start the timer on ${t.text}`, onclick: () => askFocus(t), onkeydown: e => { if (e.key === 'Enter') askFocus(t); } }, 'Start ▸')));
+}
 function taskItem(s, t, ctx, compact = false) {
   if (editing === 't:' + t.id) return h('li', {}, editForm(f => {
     const text = f.elements.text.value.trim();
@@ -553,6 +578,7 @@ function taskItem(s, t, ctx, compact = false) {
     h('input', { type: 'number', name: 'mins', min: 0, max: 1440, step: 5, value: t.mins || '', placeholder: 'min', 'aria-label': 'Estimated duration in minutes', class: 'mins' }),
     arrows(s.tasks, t)));
 
+  if (compact) return compactItem(t);
   const planned = t.today === key(today());
   // Vue compacte (créneaux de Today) : seulement le temps ; cliquer sur le titre ouvre la page de focus
   const meta = compact ? (t.mins ? [hm(t.mins)] : []) : [
@@ -585,9 +611,11 @@ function taskItem(s, t, ctx, compact = false) {
       } }),
       h('span', { class: (t.done ? 'done' : '') + (compact ? ' compact' : ''), ...(compact ? { onclick: e => { e.preventDefault(); askFocus(t); }, style: 'cursor: pointer;' } : {}) }, t.text, meta.length ? h('small', { class: 'ctx' }, meta) : null)),
     !t.done && !compact && h('button', {
-      class: 'icon day', 'aria-label': `Start a timer on: ${t.text}`, title: 'Timer: choose 25 min, 50 min or custom',
+      class: 'icon day', 'aria-label': `Start a timer on: ${t.text}`, title: 'Start: choose 25 min, 50 min or custom',
       onclick: () => askFocus(t),
-    }, 'Timer'),
+    }, 'Start'),
+    // Rendre la tâche récurrente, à côté de Start (si elle est rangée dans un projet)
+    !compact && !t.done && (() => { const hit = findTask(t.id); return hit && !hit.p.inbox ? recurButton(hit.p, { mode: 'tasks', tasks: [t.text] }, t.text) : null; })(),
     // Les autres actions sont rangées dans le menu « ⋯ » : une seule ligne par tâche
     !compact && h('details', { class: 'task-menu' },
       h('summary', { 'aria-label': `More actions for ${t.text}`, title: 'More actions' }, '⋯'),
@@ -607,14 +635,8 @@ function taskItem(s, t, ctx, compact = false) {
           : h('button', { class: 'ghost', type: 'button', 'aria-label': `Mark ${t.text} as blocked`, onclick: e => {
               askName(e.currentTarget, 'Blocked by (reason)', v => { t.blocked = v; save(); }, 'Mark blocked');
             } }, 'Mark blocked')),
-        (() => { // une tâche rangée dans un projet peut devenir récurrente
-          const hit = findTask(t.id);
-          return !t.done && hit && !hit.p.inbox ? recurButton(hit.p, { mode: 'tasks', tasks: [t.text] }, t.text) : null;
-        })(),
         editButton('t:' + t.id, `Edit task ${t.text}`),
-        h('button', { class: 'ghost', type: 'button', 'aria-label': `Delete task ${t.text}`, onclick: () => {
-          askDeleteTask(t, s);
-        } }, 'Delete'))),
+        h('button', { class: 'ghost', type: 'button', 'aria-label': `Delete task ${t.text}`, onclick: () => deleteTaskWithUndo(t, s) }, 'Delete'))),
     recurChips(findTask(t.id)?.p, tr => tr.mode === 'tasks' && (tr.tasks || []).includes(t.text)));
 }
 
@@ -642,6 +664,7 @@ const pomoLeft = tm => tm.running ? tm.left - (Date.now() - tm.runAt) : tm.left;
 let focusPick = null; // { tid, text } : tâche dont on choisit la durée
 function askFocus(t) {
   if (state.timer) return toast('A timer is already running: finish or cancel it first.');
+  if (taskStatus(t) !== 'doing' && !startKanban(t)) return; // deux tâches en cours au maximum
   // Demande, une fois, l'autorisation de notifier la fin d'un focus
   if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
   focusPick = { tid: t.id, text: t.text };
@@ -705,7 +728,7 @@ function taskLibraryCard() {
   const avg = a => a.length ? Math.round(a.reduce((n, x) => n + x, 0) / a.length) : 0;
   const rows = [...groups.values()].filter(g => g.done > 0).sort((a, b) => b.done - a.done);
   return h('details', foldable('taskLib', { class: 'card library' }),
-    h('summary', {}, `Task library (${rows.length})`),
+    h('summary', {}, `Task library (${tagStats().size})`), // le compte suit les mots-clés
     h('p', { class: 'muted' }, 'Keywords: click one to see its tasks and their durations.'),
     ...tagRows(),
     rows.length ? h('ul', { class: 'secs' }, rows.map(g => {
@@ -953,7 +976,7 @@ function runTriggers() {
     const floor = tr.freq === 'daily' ? now : addDays(now, -56); // rattrapage : 8 semaines, sauf le quotidien
     if (d < floor) d = floor;
     for (; d <= now; d = addDays(d, 1)) {
-      if (p.status === 'done' || p.status === 'dormant' || !triggerHits(tr, d)) continue;
+      if (p.status === 'finished' || !triggerHits(tr, d)) continue;
       const dk = key(d), tag = stamp(tr, d);
       if (tr.mode === 'tasks') {
         if (p.sections.some(s => s.tasks.some(t => t.from === tr.id && t.date === dk))) continue;
@@ -1074,7 +1097,7 @@ function stats() {
     minutes: state.log.reduce((n, e) => n + e.mins, 0),
     reviews: state.reviews.length,
     maxDay: Math.max(0, ...Object.values(perDay)),
-    projectsDone: state.projects.filter(p => p.status === 'done').length,
+    projectsDone: state.projects.filter(p => p.status === 'finished').length,
   };
   s.xp = s.doneTasks * 10 + s.minutes + (s.starts + s.closes) * 15 + s.checkins * 5 + s.reviews * 50;
   // Série : jours d'affilée avec une activité, en comptant aujourd'hui ou hier
@@ -1179,11 +1202,17 @@ function renderToday() {
       const newBtn = h('button', { class: 'ghost', type: 'button', onclick: () => { create.hidden = false; searchBox.hidden = true; newName.focus(); } }, 'New task');
       const pickBtn = h('button', { class: 'ghost', type: 'button', onclick: () => { searchBox.hidden = false; create.hidden = true; input.focus(); } }, 'Existing task');
       const panel = h('div', { class: 'slot-panel', hidden: true }, h('div', { class: 'row' }, newBtn, pickBtn), create, searchBox);
-      const plus = h('button', { class: 'icon slot-plus', type: 'button', 'aria-label': `Add a task to ${label}`, 'aria-expanded': 'false', onclick: e => {
+      // La carte entière est cliquable : pointillés, curseur et survol montrent qu'on peut cliquer
+      const hint = h('span', { class: 'slot-hint', 'aria-hidden': 'true' }, '+', h('small', {}, SIZE_RULE[size] + ' · click to add'));
+      const card = h('div', { class: 'slot-add', role: 'button', tabindex: '0', 'aria-label': `Add a task to ${label}`, 'aria-expanded': 'false', onclick: e => {
+        if (e.target.closest('.slot-panel')) return; // un clic dans le panneau ne le ferme pas
         panel.hidden = !panel.hidden;
-        e.currentTarget.setAttribute('aria-expanded', String(!panel.hidden));
-      } }, '+');
-      return h('div', { class: 'slot-add' }, plus, panel);
+        card.setAttribute('aria-expanded', String(!panel.hidden));
+        hint.hidden = !panel.hidden;
+      }, onkeydown: e => {
+        if ((e.key === 'Enter' || e.key === ' ') && !e.target.closest('.slot-panel')) { e.preventDefault(); card.click(); }
+      } }, hint, panel);
+      return card;
     };
     // Glisser une tâche ici pour la mettre dans ce créneau (cela règle sa taille)
     return h('div', { class: 'card', 'data-drop': '', ondragover: e => e.preventDefault(), ondrop: e => {
@@ -1264,7 +1293,27 @@ function renderToday() {
       h('p', { class: 'muted' }, '20 minutes for your weekly review, in 5 questions.'),
       h('button', { class: 'btn', onclick: () => showTab('bilan', 'review') }, 'Do my review'))] : [];
 
-  document.getElementById('today').replaceChildren(head, ...welcomeCard(), ...backupBanner(), ...friday,
+    // Saisie rapide : une tâche pour aujourd'hui, en une ligne
+  const quickInput = h('input', { type: 'text', maxlength: 120, placeholder: 'Quick add a task for today', 'aria-label': 'Quick add a task for today', class: 'grow' });
+  const quickAdd = h('form', { class: 'row', onsubmit: e => {
+    e.preventDefault();
+    const v = quickInput.value.trim();
+    if (!v) return;
+    state.inbox.tasks.push({ id: uid(), text: v, done: false, today: k });
+    save();
+  } }, quickInput, h('button', { class: 'btn', type: 'submit' }, 'Add'));
+  // La journée en une phrase
+  const plannedMins = plan.reduce((n, x) => n + (x.t.mins || 0), 0);
+  const dayLine = h('p', { class: 'muted day-line' }, `${plan.length} ${plan.length === 1 ? 'task' : 'tasks'} planned · ${hm(plannedMins)} estimated · ${hm(mins)} done`);
+  // Ce qui est en retard : tâches et projets dont la date est passée
+  const lateTasks = all.filter(x => !x.t.done && x.t.due && x.t.due < k);
+  const lateProjects = state.projects.filter(p => p.status !== 'finished' && p.due && p.due < k);
+  const lateCard = (lateTasks.length || lateProjects.length) ? [h('div', { class: 'card' },
+    h('strong', {}, `Late (${lateTasks.length + lateProjects.length})`),
+    h('ul', { class: 'secs' },
+      lateProjects.map(p => h('li', {}, h('span', {}, `Project: ${p.name}`), h('small', { class: 'ctx' }, ` · end date ${shortDate(p.due)}`))),
+      lateTasks.map(x => h('li', {}, h('span', {}, x.t.text), h('small', { class: 'ctx' }, ` · due ${shortDate(x.t.due)}`)))))] : [];
+  document.getElementById('today').replaceChildren(quickAdd, dayLine, ...lateCard, head, ...welcomeCard(), ...backupBanner(), ...friday,
     ...(plan.length ? [] : [h('p', { class: 'empty' }, 'No tasks chosen for today yet. Search a task in a slot below, or click “Today” on a task in the Tasks tab.')]),
     // Les trois colonnes de même largeur ; sur petit écran, défilement horizontal
     h('div', { class: 'slots slots-3' }, slot('L', 'Big task'), slot('M', 'Medium tasks'), slot('S', 'Small tasks')),
@@ -1276,57 +1325,34 @@ function renderToday() {
 }
 
 /* ---------- Review : la revue du vendredi, et son historique ---------- */
-function renderReview() {
-  // La revue de la semaine en cours ne s'ouvre que le vendredi ; avant, on montre celle de la semaine passée
-  const mon = mondayOf(today());
-  const isFriday = key(today()) >= key(addDays(mon, 4));
-  const wk = key(isFriday ? mon : addDays(mon, -7));
-  const weekNo = isoWeek(new Date(wk + 'T00:00'));
+// Revue de la semaine affichée dans Week : on la remplit pour la semaine choisie, et on voit ses réponses
+let reviewOpen = null; // semaine dont le formulaire est ouvert
+function weeklyReviewCard(mon) {
+  const wk = key(mon);
   const saved = state.reviews.find(r => r.week === wk);
   if (!saved && state.reviewDraft?.week !== wk) state.reviewDraft = { week: wk, a: ['', '', '', '', ''] };
   const cur = saved || state.reviewDraft;
-
-  // Aides tirées des données : ce qui a été coché cette semaine, ce que les projets actifs attendent
-  const checked = [state.inbox, ...state.projects.flatMap(p => p.sections)]
-    .flatMap(s => s.tasks).filter(t => t.done && t.doneAt >= wk).map(t => t.text);
-  const waiting = state.projects.filter(p => p.status === 'active' && p.waiting && !/^rien\.?$/i.test(p.waiting))
-    .map(p => `${p.name} : ${p.waiting}`);
-  const hints = { 0: ['Checked off this week', checked], 2: ['Noted in "Waiting on"', waiting] };
-  const hint = i => hints[i]?.[1].length ? h('p', { class: 'muted' },
-    `${hints[i][0]} : ${hints[i][1].join(' ; ')} `,
-    h('button', { class: 'ghost', type: 'button', onclick: () => {
-      cur.a[i] = [cur.a[i], ...hints[i][1]].filter(Boolean).join('\n');
-      save();
-    } }, 'Copy into my answer')) : null;
-
-  const formCard = h('div', { class: 'card stack' },
-    h('strong', {}, `Weekly review, week ${weekNo}${isFriday ? '' : ' (last week)'}`),
-    h('p', { class: 'muted' }, saved
-      ? `Saved on ${shortDate(saved.date)}, you can still complete it.`
-      : isFriday
-        ? '20 minutes, every Friday: look back at the week that is ending, then prepare the next one.'
-        : 'Last week’s review. The review for this week opens on Friday.'),
+  const editing = reviewOpen === wk;
+  const head = h('strong', {}, `Weekly review, week ${isoWeek(mon)}`);
+  if (!editing) {
+    return h('div', { class: 'card stack' }, head,
+      saved
+        ? [h('p', { class: 'muted' }, `Saved on ${shortDate(saved.date)}`), QUESTIONS.map((q, i) => fact(q, saved.a[i] || 'No answer'))]
+        : h('p', { class: 'muted' }, 'No review for this week yet.'),
+      h('button', { class: 'btn', type: 'button', onclick: () => { reviewOpen = wk; render(); } }, saved ? 'Edit the 5 questions' : 'Fill the 5 questions'));
+  }
+  return h('div', { class: 'card stack' }, head,
     QUESTIONS.map((q, i) => h('div', { class: 'q' },
       h('b', {}, `${i + 1}. ${q}`),
-      hint(i),
       bind('textarea', cur.a, i, { class: 'small', 'aria-label': q }))),
-    h('button', { class: 'btn', onclick: () => {
-      if (!saved) { cur.date = key(today()); state.reviews.unshift(cur); delete state.reviewDraft; }
-      save();
-      toast('Review saved.');
-    } }, saved ? 'Update review' : 'Save review'));
-
-  const past = state.reviews.filter(r => r !== saved);
-  // Le vendredi, rappel tant que la revue de la semaine n'est pas enregistrée
-  const reminder = isFriday && !saved ? [h('div', { class: 'card' }, h('strong', {}, 'Weekly review due today'),
-    h('p', { class: 'muted' }, 'Friday: look back at the week, then prepare the next one.'))] : [];
-  document.getElementById('review').replaceChildren(...reminder, ...prepBlocks(), formCard, ...(past.length ? [h('div', { class: 'card' },
-    h('strong', {}, `Previous reviews (${past.length})`),
-    h('ul', { class: 'secs' }, past.map(r => h('li', {}, h('details', foldable('rev-' + r.week, { class: 'grow' }),
-      h('summary', { class: 'row' },
-        h('span', { class: 'grow' }, `Week ${isoWeek(new Date(r.week + 'T00:00'))}`),
-        h('span', { class: 'muted' }, `revue du ${shortDate(r.date)}`)),
-      QUESTIONS.map((q, i) => fact(q, r.a[i] || 'No answer')))))))] : []));
+    h('div', { class: 'row' },
+      h('button', { class: 'btn', type: 'button', onclick: () => {
+        if (!saved) { cur.week = wk; cur.date = key(today()); state.reviews.unshift(cur); delete state.reviewDraft; }
+        reviewOpen = null;
+        save();
+        toast('Review saved.');
+      } }, saved ? 'Update review' : 'Save review'),
+      h('button', { class: 'ghost', type: 'button', onclick: () => { reviewOpen = null; render(); } }, 'Cancel')));
 }
 
 /* ---------- Nouvelle tâche : tout se choisit ou se crée dans le formulaire ----------
@@ -1368,24 +1394,36 @@ function addKeywords(tags) {
   if (lib) { const open = lib.open; const fresh = taskLibraryCard(); fresh.open = open; lib.replaceWith(fresh); }
 }
 // Bibliothèque : un mot-clé par ligne ; un clic l'ouvre avec ses tâches et leurs durées
+// Une fenêtre qui liste toutes les tâches d'un mot-clé, avec leurs durées
+function keywordDialog(tag, s) {
+  let dlg = document.getElementById('kw-dialog');
+  if (!dlg) { dlg = h('dialog', { id: 'kw-dialog', class: 'banner-picker', 'aria-label': 'Tasks with this keyword' }); document.body.append(dlg); }
+  dlg.replaceChildren(closeX(dlg), h('strong', {}, `#${tag}`),
+    h('p', { class: 'muted' }, `${plural(s.n, 'task')} · average ${meanOf(s.vals) ? hm(meanOf(s.vals)) : 'not timed yet'}`),
+    s.tasks.length
+      ? h('ul', { class: 'secs' }, s.tasks.map(x => h('li', {},
+          h('span', { class: x.done ? 'done' : '' }, x.text),
+          h('small', { class: 'ctx' }, ` · ${x.mins ? `${hm(x.mins)} estimated` : 'no estimate'}${x.spent ? ` · ${hm(x.spent)} spent` : ''}`))))
+      : h('p', { class: 'empty' }, 'No task with this keyword yet.'));
+  if (!dlg.open) dlg.showModal();
+}
+// Par mot-clé : nom, nombre de tâches et moyenne, et une icône qui ouvre la liste des tâches
 function tagRows() {
   const stats = [...tagStats()].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0]));
   if (!stats.length) return [];
-  return [h('strong', {}, 'Keywords'), h('ul', { class: 'secs' }, stats.map(([tag, s]) => h('li', {},
-    h('details', foldable('kw-' + tag, { class: 'grow' }),
-      h('summary', {},
-        h('span', {}, `#${tag}`),
-        h('small', { class: 'ctx' }, ` ${plural(s.n, 'task')} · average ${meanOf(s.vals) ? hm(meanOf(s.vals)) : 'not timed yet'}`)),
-      s.tasks.length
-        ? h('ul', { class: 'secs' }, s.tasks.map(x => h('li', {},
-            h('span', { class: x.done ? 'done' : '' }, x.text),
-            h('small', { class: 'ctx' }, ` · ${x.mins ? `${hm(x.mins)} estimated` : 'no estimate'}${x.spent ? ` · ${hm(x.spent)} spent` : ''}`))))
-        : h('p', { class: 'muted' }, 'No task with this keyword yet.'))))),
-  ];
+  return [h('strong', {}, 'Keywords'), h('ul', { class: 'secs' }, stats.map(([tag, s]) => {
+    const open = h('button', { class: 'icon kw-open', type: 'button', 'aria-label': `Show the tasks with #${tag}`, title: 'Show the tasks', onclick: () => keywordDialog(tag, s) });
+    open.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>';
+    return h('li', { class: 'kw-row' },
+      h('span', {}, `#${tag}`),
+      h('small', { class: 'ctx' }, ` ${plural(s.n, 'task')} · average ${meanOf(s.vals) ? hm(meanOf(s.vals)) : 'not timed yet'}`),
+      open);
+  }))];
 }
 function newTaskForm() {
   // Champ mots-clés, et conseil : la durée moyenne des tâches qui ont les mêmes mots-clés
-  const tagsInput = h('input', { type: 'text', name: 'tags', class: 'grow', placeholder: 'Keywords, e.g. call, writing', maxlength: 120, 'aria-label': 'Keywords' });
+  const tagsInput = h('input', { type: 'text', name: 'tags', class: 'grow', placeholder: 'Keywords, e.g. call, writing', maxlength: 120, 'aria-label': 'Keywords', list: 'kw-suggest' });
+  const kwSuggest = h('datalist', { id: 'kw-suggest' }, (state.keywords || []).map(x => h('option', { value: x })));
   const tagHint = h('p', { class: 'note tag-hint', hidden: true });
   // Un mot-clé est enregistré dès qu'on quitte le champ, même si la tâche n'est pas créée
   tagsInput.addEventListener('change', () => { addKeywords(normTags(tagsInput.value)); });
@@ -1397,10 +1435,8 @@ function newTaskForm() {
       h('button', { class: 'ghost', type: 'button', onclick: () => { tagsInput.form.elements.mins.value = avg; } }, 'Use this time'),
     ] : []));
   });
-  const actives = () => state.projects.filter(p => p.status === 'active').length;
   const smartBox = h('div', { class: 'smart-box', hidden: true },
     SMART_FIELDS.map(([n, label]) => h('input', { type: 'text', name: n, class: 'grow', placeholder: label, 'aria-label': label, maxlength: 160 })));
-  const typeSel = picker('type', [['', 'Category…'], ...typeOptions(), ['__new', '+ New category…']], undefined, 'Project category');
   const projSel = h('select', { name: 'project', 'aria-label': 'Projet' },
     h('option', { value: '', disabled: true, selected: true }, 'Project *'),
     state.projects.map(p => h('option', { value: p.id }, p.name)),
@@ -1419,21 +1455,11 @@ function newTaskForm() {
     sel.insertBefore(h('option', { value }, label), sel.querySelector('option[value="__new"]'));
     sel.value = value;
   };
-  typeSel.addEventListener('change', () => {
-    if (typeSel.value !== '__new') return;
-    typeSel.value = '';
-    askName(typeSel, 'Category name', v => {
-      const c = { id: uid(), name: v };
-      state.types.push(c);
-      persist();
-      newOpt(typeSel, c.id, c.name);
-    });
-  });
   projSel.addEventListener('change', () => {
     if (projSel.value === '__new') {
       projSel.value = 'inbox';
       return askName(projSel, 'New project name', name => {
-        const p = { id: uid(), name, status: actives() < MAX_ACTIVE ? 'active' : 'waiting', type: typeSel.value || '',
+        const p = { id: uid(), name, status: 'break', 
           due: '', sections: [], triggers: [], tools: [], answers: {} };
         state.projects.push(p);
         persist();
@@ -1477,7 +1503,7 @@ function newTaskForm() {
     h('input', { type: 'number', name: 'mins', min: 0, max: 1440, step: 5, placeholder: 'Minutes', 'aria-label': 'Estimated duration in minutes', class: 'mins' }),
     picker('quad', QUADS, '', 'Priority (Eisenhower)'),
     h('label', { class: 'row' }, h('input', { type: 'checkbox', name: 'key', 'aria-label': 'Key 20 percent task' }), h('span', { class: 'muted' }, 'Key 20% (Pareto)')),
-    tagsInput, tagHint, projSel, secSel,
+    tagsInput, kwSuggest, tagHint, projSel, secSel,
     h('button', { class: 'btn' }, 'Add'));
 }
 
@@ -1505,12 +1531,12 @@ function prepBlocks() {
       list.length ? h('ul', { class: 'tasks' }, ordered(list).map(row)) : h('p', { class: 'muted' }, 'Nothing here.'));
   };
   const unsorted = open.filter(x => !x.t.quad);
-  const activeCount = state.projects.filter(p => p.status === 'active').length;
   return [
     h('div', { class: 'card' },
       h('strong', {}, 'Prepare the week'),
       h('p', { class: 'muted' }, 'On Friday: look back at the week, then sort what comes next. Priority is the Eisenhower box. 80/20 marks the few tasks that give most of the result (Pareto).'),
-      h('p', { class: 'note' }, `${plural(activeCount, 'active project')} · ${MAX_ACTIVE} at most`)),
+      helpBtn('80/20', 'The 80/20 rule: about 20% of the tasks give about 80% of the results. Mark those few tasks with 80/20 so they come first.'),
+      ),
     ...(unsorted.length ? [h('div', { class: 'card' }, h('strong', {}, `To sort (${unsorted.length})`), h('ul', { class: 'tasks' }, ordered(unsorted).map(row)))] : []),
     h('div', { class: 'slots' }, ['do', 'plan', 'frame', 'drop'].map(box))];
 }
@@ -1578,6 +1604,63 @@ function avancementCard() {
       h('strong', {}, 'Avancement'),
       h('div', { class: 'muted' }, all.length ? `${done.length} of ${all.length} done${estimate ? ` · ${hm(estimate)} estimated in total` : ''}` : 'No tasks')));
 }
+// Une méthode, en lecture : sa définition et ses étapes
+function methodCard(m) {
+  return h('details', foldable('method-' + m.name, { class: 'card library' }),
+    h('summary', {}, m.name),
+    h('p', { class: 'muted' }, m.what),
+    h('ol', { class: 'steps' }, m.steps.map(s => h('li', {}, s))));
+}
+// Kanban : trois colonnes (To do, In progress, Done). Deux tâches en cours au maximum.
+const MAX_DOING = 2;
+const taskStatus = t => t.done ? 'done' : t.status === 'doing' ? 'doing' : 'todo';
+const doingTasks = () => tasks().map(x => x.t).filter(t => taskStatus(t) === 'doing');
+// Petite fenêtre qui explique une règle
+function popupRule(title, text) {
+  let dlg = document.getElementById('rule-dialog');
+  if (!dlg) { dlg = h('dialog', { id: 'rule-dialog', class: 'banner-picker', 'aria-label': title }); document.body.append(dlg); }
+  dlg.replaceChildren(closeX(dlg), h('strong', {}, title), h('p', { class: 'muted' }, text),
+    h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', onclick: () => dlg.close() }, 'OK')));
+  if (!dlg.open) dlg.showModal();
+}
+// Passe une tâche en cours : refusé si deux sont déjà en cours
+function startKanban(t) {
+  if (taskStatus(t) === 'doing') return true;
+  if (doingTasks().length >= MAX_DOING) {
+    popupRule('Two tasks are already in progress', 'Kanban keeps two tasks in progress at most. Finish one of them before you start another.');
+    return false;
+  }
+  t.status = 'doing';
+  save();
+  return true;
+}
+// Déplace une tâche d'une colonne à une autre
+function moveKanban(t, to) {
+  if (taskStatus(t) === to) return;
+  if (to === 'doing') { if (t.done) { t.done = false; delete t.doneAt; } startKanban(t); return; }
+  if (to === 'done') { t.done = true; t.doneAt = key(today()); delete t.status; }
+  else { t.done = false; delete t.doneAt; t.status = 'todo'; }
+  save();
+}
+function kanbanBoard() {
+  const all = tasks();
+  const col = (to, title, items) => h('div', { class: 'kb-col', 'data-drop': '', ondragover: e => e.preventDefault(), ondrop: e => {
+      e.preventDefault();
+      const hit = findTask(e.dataTransfer.getData('text/plain'));
+      if (hit) moveKanban(hit.t, to);
+    } },
+    h('strong', {}, `${title} (${items.length})`),
+    h('ul', { class: 'kb-list' }, items.map(x => h('li', { draggable: 'true', ondragstart: e => e.dataTransfer.setData('text/plain', x.t.id) },
+      h('span', { class: to === 'done' ? 'done' : '' }, x.t.text),
+      h('small', { class: 'ctx' }, x.t.mins ? ` ${hm(x.t.mins)}` : ''),
+      to === 'done' ? null : h('span', { class: 'start-link', role: 'link', tabindex: '0', onclick: () => { if (to === 'todo') { if (startKanban(x.t)) askFocus(x.t); } else askFocus(x.t); } }, to === 'todo' ? 'Start ▸' : 'Timer ▸')))));
+  const todo = all.filter(x => taskStatus(x.t) === 'todo');
+  const doing = all.filter(x => taskStatus(x.t) === 'doing');
+  const done = all.filter(x => taskStatus(x.t) === 'done').slice(-8);
+  return h('div', { class: 'card kanban' },
+    h('div', { class: 'row' }, h('strong', {}, 'Kanban'), helpBtn('Kanban', 'Kanban shows your work as three columns: to do, in progress, done. Keep two tasks in progress at most, so each one gets finished.'), h('span', { class: 'muted' }, `${doing.length} of ${MAX_DOING} in progress`)),
+    h('div', { class: 'kb-board' }, col('todo', 'To do', todo), col('doing', 'In progress', doing), col('done', 'Done', done)));
+}
 function renderTasks() {
   const all = tasks();
   const flat = all.map(x => x.t), done = all.filter(x => x.t.done);
@@ -1598,15 +1681,14 @@ function renderTasks() {
 
   // Récurrences repliées ; la bibliothèque unique est en tout dernier, avec les mots-clés
   const recurring = h('details', foldable('recurring', { class: 'card library' }), h('summary', {}, 'Recurring tasks'), recurringCard());
-  const library = h('details', foldable('library-all', { class: 'card library' }), h('summary', {}, 'Library'), libraryCard(), taskLibraryCard());
-  document.getElementById('tasks').replaceChildren(summary, add, ...([
+  document.getElementById('tasks').replaceChildren(summary, add, kanbanBoard(), ...([
     ...(inbox.length ? [list(INBOX.name, inbox, 'Sort into a section: click the pencil.')] : []),
     ...(open.length ? [todoBlock(open.sort(byUrgency))] : []),
     // Les tâches faites restent cachées tant qu'on ne les demande pas
     ...(done.length ? [showDone
       ? h('div', {}, list('Done', done), h('button', { class: 'ghost', type: 'button', onclick: () => { showDone = false; render(); } }, 'Hide done'))
       : h('button', { class: 'ghost', type: 'button', onclick: () => { showDone = true; render(); } }, `Show done (${done.length})`)] : []),
-  ]), recurring, library);
+  ]), recurring, taskLibraryCard());
 }
 
 /* ---------- Sections : rangées par projet, avec leurs tâches ---------- */
@@ -1661,10 +1743,10 @@ function sectionCard(p, s) {
     save();
     toast(`Moved to "${s.name}".`);
   } },
+    // La section se déplie : son nom est le titre, et ses boutons sont dans le contenu
+    h('details', foldable('sec-' + s.id, { class: 'sec-fold' }),
+      h('summary', {}, h('span', { class: 'sec-title', draggable: 'true', title: 'Drag to reorder this section', ondragstart: e => e.dataTransfer.setData('application/x-section', s.id) }, s.name), h('span', { class: 'muted' }, ` ${doneCount(s.tasks)}/${s.tasks.length}`)),
     h('div', { class: 'proj-head' },
-      // Le titre se glisse pour changer l'ordre des sections du projet
-      h('h3', { class: 'grow small', draggable: 'true', title: 'Drag to reorder this section',
-        ondragstart: e => e.dataTransfer.setData('application/x-section', s.id) }, s.name),
       // Déplacer vers un autre projet : rangé dans le menu « ⋯ » pour alléger la carte (Hick)
       ...(state.projects.length > 1 ? [h('details', { class: 'task-menu' },
         h('summary', { 'aria-label': `More actions for section ${s.name}`, title: 'More actions' }, '⋯'),
@@ -1680,16 +1762,12 @@ function sectionCard(p, s) {
       editButton('s:' + s.id, `Edit section ${s.name}`),
       h('button', {
         class: 'icon', 'aria-label': `Delete section ${s.name}`,
-        onclick: () => {
-          if (s.tasks.length && !confirm(`Delete the section "${s.name}" and its ${plural(s.tasks.length, 'task')}?`)) return;
-          p.sections = p.sections.filter(x => x !== s); save();
-        },
+        onclick: () => askDeleteSection(p, s),
       }, '×')),
     bind('input', s, 'dod', { type: 'text', class: 'dod', placeholder: 'Definition of done: what must be true to say it is finished', 'aria-label': `Definition of done for ${s.name}`, maxlength: 160 }),
     h('label', { class: 'row' }, h('span', { class: 'muted' }, 'Deadline'), bind('input', s, 'due', { type: 'date', 'aria-label': `Deadline of section ${s.name}` })),
     recurChips(p, tr => tr.mode === 'section' && tr.name === s.name),
     progress(s.tasks, 'No tasks'),
-    toolPanel(s, 'section', 'cette'),
     h('ul', { class: 'tasks' }, ordered(s.tasks).map(t => taskItem(s, t))),
     form(f => {
       const text = f.elements.task.value.trim();
@@ -1699,7 +1777,7 @@ function sectionCard(p, s) {
       document.querySelector(`[data-task-for="${s.id}"]`).focus();
     },
       h('input', { type: 'text', name: 'task', class: 'grow', placeholder: 'Add a task *', maxlength: 120, 'aria-label': `New task in ${s.name}`, 'data-task-for': s.id }),
-      h('button', { class: 'btn' }, 'Add')));
+      h('button', { class: 'btn' }, 'Add'))));
 }
 
 function renderSections() {
@@ -1712,7 +1790,7 @@ function renderSections() {
     if (projSel.value !== '__new') return;
     projSel.value = '';
     askName(projSel, 'New project name', name => {
-      const active = state.projects.filter(x => x.status === 'active').length < MAX_ACTIVE;
+      const active = false;
       const p = { id: uid(), name, status: active ? 'active' : 'waiting', type: '', due: '', sections: [], triggers: [], tools: [], answers: {} };
       state.projects.push(p);
       pickedProject = p.id;
@@ -1761,15 +1839,14 @@ function projectCard(p) {
   const all = live(p).flatMap(s => s.tasks);
   const left = all.length - doneCount(all);
   const archived = p.sections.filter(s => s.archived);
-  const late = p.due && p.status !== 'done' && p.due < key(new Date());
+  const late = p.due && p.status !== 'finished' && p.due < key(new Date());
 
   const meta = [
-    typeName(p.type),
     p.due && `Due: ${fmt(new Date(p.due + 'T00:00'), { day: 'numeric', month: 'long', year: 'numeric' })}${late ? ' (overdue)' : ''}`,
   ].filter(Boolean).join(' · ');
 
   // Glisser une tâche sur le projet : elle rejoint sa première section (ou « General » s'il n'en a pas)
-  return h('div', { class: 'card', 'data-drop': '', ondragover: e => e.preventDefault(), ondrop: e => {
+  return h('details', { class: 'card proj-fold', 'data-drop': '', ...foldable('proj-' + p.id, {}), ...(editing === 'p:' + p.id ? { open: true } : {}), ondragover: e => e.preventDefault(), ondrop: e => {
     e.preventDefault();
     const hit = findTask(e.dataTransfer.getData('text/plain'));
     if (!hit || hit.p === p) return;
@@ -1779,36 +1856,36 @@ function projectCard(p) {
     save();
     toast(`Moved to "${p.name}".`);
   } },
+    h('summary', {}, h('h3', { class: 'grow' }, p.name), h('span', { class: 'muted' }, ` ${doneCount(all)}/${all.length}`)),
     editing === 'p:' + p.id ? editForm(f => {
       const name = f.elements.name.value.trim();
       if (!name) return;
+      if (!f.elements.due.value) return toast('Every project needs an end date.');
       Object.assign(p, {
-        name, due: f.elements.due.value, type: f.elements.type.value, moscow: f.elements.moscow.value,
+        name, due: f.elements.due.value, moscow: f.elements.moscow.value,
         deliverable: f.elements.deliverable.value.trim(), next: f.elements.next.value.trim(), waiting: f.elements.waiting.value.trim(),
-        where: f.elements.where.value.trim(), block: f.elements.block.value.trim(),
+        where: f.elements.where.value.trim(), block: f.elements.block.value.trim(), skills: f.elements.skills.value.trim(),
       });
       editing = null;
       save();
     },
       h('input', { type: 'text', name: 'name', class: 'grow', value: p.name, maxlength: 80, 'aria-label': 'Project name', 'data-edit': true }),
-      h('input', { type: 'date', name: 'due', value: p.due || '', 'aria-label': 'Due date (optional)', title: 'Due date (optional)' }),
-      picker('type', typeOptions(), p.type, 'Type de projet'),
+      h('label', { class: 'dateField' }, h('span', { class: 'muted' }, 'End date *'), h('input', { type: 'date', name: 'due', value: p.due || '', required: true, 'aria-label': 'End date (required)' })),
       picker('moscow', MOSCOW, p.moscow || '', 'MoSCoW'),
       h('input', { type: 'text', name: 'deliverable', class: 'grow', value: p.deliverable || '', placeholder: 'Expected deliverable', maxlength: 120, 'aria-label': 'Expected deliverable' }),
       h('input', { type: 'text', name: 'where', class: 'grow', value: p.where || '', placeholder: 'Where I am', maxlength: 200, 'aria-label': 'Where I am' }),
       h('input', { type: 'text', name: 'block', class: 'grow', value: p.block || '', placeholder: 'What is blocking', maxlength: 200, 'aria-label': 'What is blocking' }),
       h('input', { type: 'text', name: 'next', class: 'grow', value: p.next || '', placeholder: 'Next action (30 min max, starts with a verb)', maxlength: 120, 'aria-label': 'Next action' }),
-      h('input', { type: 'text', name: 'waiting', class: 'grow', value: p.waiting || '', placeholder: 'Waiting on what, from whom', maxlength: 120, 'aria-label': 'What I am waiting for, and from whom' }))
+      h('input', { type: 'text', name: 'waiting', class: 'grow', value: p.waiting || '', placeholder: 'Waiting on what, from whom', maxlength: 120, 'aria-label': 'What I am waiting for, and from whom' }),
+      h('input', { type: 'text', name: 'skills', class: 'grow', value: p.skills || '', placeholder: 'Skills to use', maxlength: 160, 'aria-label': 'Skills to use' }))
     : h('div', { class: 'proj-head' },
-      h('div', { class: 'grow' },
-        h('h3', {}, p.name),
-        h('span', { class: 'muted' + (late ? ' late' : '') }, meta)),
+      h('div', { class: 'grow' }, h('span', { class: 'muted' + (late ? ' late' : '') }, meta)),
       h('select', { 'aria-label': 'Statut', onchange: e => { p.status = e.target.value; save(); } },
         STATUSES.map(([v, l]) => h('option', { value: v, selected: p.status === v }, l))),
       editButton('p:' + p.id, `Edit project ${p.name}`),
       h('button', {
         class: 'icon', 'aria-label': `Delete ${p.name}`,
-        onclick: () => { if (confirm(`Delete the project "${p.name}", its sections and its tasks?`)) { state.projects = state.projects.filter(x => x !== p); save(); } },
+        onclick: () => askDeleteProject(p),
       }, '×')),
     // Sections et tâches juste sous l'en-tête : on crée tout ici, sans descendre
     // Le formulaire d'ajout de section est replié, pour ne pas multiplier les champs (Hick)
@@ -1835,8 +1912,7 @@ function projectCard(p) {
               recurButton(p, { mode: 'section', name: s.name, tasks: s.tasks.map(t => t.text) }, `section ${s.name}`),
               h('button', { class: 'icon', type: 'button', 'aria-label': `Delete section ${s.name}`,
                 onclick: e => { e.preventDefault(); e.stopPropagation(); deleteSection(p, s); } }, '×')),
-            toolPanel(s, 'section', 'cette'),
-            h('ul', { class: 'tasks' }, ordered(s.tasks).map(t => taskItem(s, t))),
+                    h('ul', { class: 'tasks' }, ordered(s.tasks).map(t => taskItem(s, t))),
             form(f => {
               const text = f.elements.task.value.trim();
               if (!text) return;
@@ -1847,10 +1923,9 @@ function projectCard(p) {
               h('input', { type: 'text', name: 'task', class: 'grow', placeholder: 'Add a task *', maxlength: 120, 'aria-label': `New task in ${s.name}`, 'data-ptask': s.id }),
               h('button', { class: 'btn' }, 'Add'))))))
       : null,
-    projectTools(p),
-    [['MoSCoW', (MOSCOW.find(([v]) => v === p.moscow) || [])[1]], ['Deliverable', p.deliverable], ['Where I am', p.where], ['Next action', p.next], ['Blocked by', p.block], ['Waiting on', p.waiting]]
+    [['MoSCoW', (MOSCOW.find(([v]) => v === p.moscow) || [])[1]], ['Skills to use', p.skills], ['Deliverable', p.deliverable], ['Where I am', p.where], ['Next action', p.next], ['Blocked by', p.block], ['Waiting on', p.waiting]]
       .filter(([, v]) => v).map(([l, v]) => fact(l, v)),
-    p.status === 'active' && !p.next
+    p.status !== 'finished' && !p.next
       ? h('p', { class: 'note' }, 'No next action: add one with the pencil (30 min at most, starting with a verb).') : null,
     progress(all, 'No tasks'),
     all.length ? h('p', { class: 'note' }, left ? `${plural(left, 'task')} left` : 'All done!') : null,
@@ -1862,77 +1937,32 @@ function projectCard(p) {
   );
 }
 
-// Liste des catégories de projet, avec « + New category… » pour en créer directement ici
-function categorySelect() {
-  const sel = picker('type', [['', 'Category…'], ...typeOptions(), ['__new', '+ New category…']], undefined, 'Project category');
-  sel.addEventListener('change', () => {
-    if (sel.value !== '__new') return;
-    sel.value = '';
-    askName(sel, 'Category name', v => {
-      const c = { id: uid(), name: v };
-      state.types.push(c);
-      persist();
-      sel.insertBefore(h('option', { value: c.id }, c.name), sel.querySelector('option[value="__new"]'));
-      sel.value = c.id;
-    });
-  });
-  return sel;
-}
-
 function renderProjects() {
-  const actives = state.projects.filter(p => p.status === 'active');
-  // Nouveau projet : nom, catégorie, échéance facultative, outils liés, puis création
-  const linked = h('details', foldable('newproj-tools', { class: 'linked' }),
-    h('summary', {}, 'Linked tools (optional)'),
-    [...new Set(allTools().map(t => t.cat))].map(c => h('div', { class: 'cat' },
-      h('strong', {}, c),
-      allTools().filter(t => t.cat === c).map(t => h('label', { class: 'chk' },
-        h('input', { type: 'checkbox', name: 'tool', value: t.id }), ` ${t.name}`)))));
+  // Nouveau projet : nom, fin obligatoire, puis création
   const add = h('div', { class: 'card' }, form(f => {
     const name = f.elements.name.value.trim();
     if (!name) return;
-    // un nouveau projet est actif tant qu'il reste de la place, sinon il attend
-    const status = actives.length < MAX_ACTIVE ? 'active' : 'waiting';
-    const tools = [...f.querySelectorAll('input[name=tool]:checked')].map(i => i.value);
-    state.projects.push({ id: uid(), name, status, type: f.elements.type.value, moscow: f.elements.moscow.value, due: f.elements.due.value, sections: [], triggers: [], tools, answers: {} });
-    openIds.delete('newproj-tools');
+    if (!f.elements.due.value) return toast('Set an end date for the project first.');
+    const status = f.elements.status.value;
+    if (!status) return toast('Choose Finished or Break.');
+    state.projects.push({ id: uid(), name, status, moscow: f.elements.moscow.value, due: f.elements.due.value, skills: f.elements.skills.value.trim(), sections: [], triggers: [], tools: [], answers: {} });
     save();
   },
     h('input', { type: 'text', name: 'name', class: 'grow', placeholder: 'Project name *', maxlength: 80, 'aria-label': 'Project name' }),
-    categorySelect(),
     picker('moscow', MOSCOW, '', 'MoSCoW'),
-    h('input', { type: 'date', name: 'due', 'aria-label': 'Due date (optional)', title: 'Due date (optional)' }),
-    linked,
+    h('select', { name: 'status', required: true, 'aria-label': 'Status (required)' }, h('option', { value: '' }, 'Status *'), STATUSES.map(([v, l]) => h('option', { value: v }, l))),
+    h('input', { type: 'text', name: 'skills', class: 'grow', placeholder: 'Skills to use', maxlength: 160, 'aria-label': 'Skills to use' }),
+    h('label', { class: 'dateField' }, h('span', { class: 'muted' }, 'End date *'), h('input', { type: 'date', name: 'due', required: true, 'aria-label': 'End date (required)' })),
+    h('div', { class: 'chips' }, [['1 week', 7], ['1 month', 30], ['3 months', 90]].map(([l, d]) => h('button', { class: 'ghost', type: 'button', onclick: e => { e.currentTarget.form.elements.due.value = key(addDays(today(), d)); } }, l))),
     h('button', { class: 'btn' }, 'Create project')));
 
-  const warn = actives.length > MAX_ACTIVE ? h('div', { class: 'card warn' },
-    h('strong', {}, `${actives.length} projets actifs, ${MAX_ACTIVE} au maximum`),
-    h('p', { class: 'muted' }, 'Put one on hold to keep a workload you can sustain:'),
-    h('div', { class: 'row' }, actives.map(p =>
-      h('button', { class: 'ghost', onclick: () => { p.status = 'waiting'; save(); } }, `${p.name} → en attente`)))) : null;
 
   const groups = STATUSES.flatMap(([v, label]) => {
     const list = state.projects.filter(p => p.status === v);
     return list.length ? [h('h2', { class: 'group ' + v }, `${label} (${list.length})`), ...list.map(projectCard)] : [];
   });
 
-  // Routine de recherche active : une section « Recherche active » dans le projet choisi, une tâche par jour de semaine
-  if (state.projects.length && !state.projects.some(p => p.sections.some(s => s.name === 'Recherche active'))) {
-    const pick = picker('project', state.projects.map(p => [p.id, p.name]), state.projects[0].id, 'Project of the routine');
-    add.append(h('div', { class: 'row' }, pick, h('button', { class: 'ghost', type: 'button', onclick: () => {
-      const p = state.projects.find(x => x.id === pick.value);
-      if (!p) return;
-      p.sections.push({ id: uid(), name: 'Recherche active', routine: true, tasks: [] });
-      p.triggers = [...(p.triggers || []), ...ROUTINE.map(([day, task]) => ({
-        id: uid(), mode: 'tasks', freq: 'weekly', days: [day], dom: 1, name: '', tasks: [task],
-        anchor: key(today()), lastRun: key(addDays(today(), -1)),
-      }))];
-      runTriggers();
-      save();
-    } }, 'Add my active-search routine (Monday to Friday)')));
-  }
-
-  document.getElementById('projects').replaceChildren(avancementCard(), add, ...(warn ? [warn] : []),
+  document.getElementById('projects').replaceChildren(avancementCard(), add,
     ...(groups.length ? groups : [h('p', { class: 'empty' }, 'No projects yet. Create one in the form above.')]));
 }
 
@@ -1982,9 +2012,11 @@ function renderCalendar() {
       h('button', { class: 'ghost', 'aria-label': 'Previous month', onclick: () => { calMonth = new Date(first.getFullYear(), first.getMonth() - 1, 1); renderCalendar(); } }, '‹'),
       h('strong', {}, fmt(first, { month: 'long', year: 'numeric' })),
       h('button', { class: 'ghost', 'aria-label': 'Next month', onclick: () => { calMonth = new Date(first.getFullYear(), first.getMonth() + 1, 1); renderCalendar(); } }, '›')),
+    h('p', { class: 'note' }, (() => { const pre = key(first).slice(0, 7); const ts = tasks().map(x => x.t).filter(t => (t.today || '').startsWith(pre)); const est = ts.reduce((n, t) => n + (t.mins || 0), 0); return `This month: ${plural(ts.length, 'task')} planned · ${hm(est)} estimated.`; })()),
     h('p', { class: 'note' }, 'Drag a task from the Tasks tab onto a day to plan it. Click a day to see its hours.'),
     h('div', { class: 'grid-head' }, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => h('span', {}, d))),
     h('div', { class: 'grid' }, cells),
+    methodCard(TIME_BLOCKING),
     h('div', { class: 'card' },
       h('strong', {}, fmt(new Date(calDay + 'T00:00'), { weekday: 'long', day: 'numeric', month: 'long' })),
       dayItems.length
@@ -2188,6 +2220,26 @@ function weekGrid(days) {
         list.length ? h('ul', { class: 'secs' }, list.map(x => h('li', {}, x.t.text))) : h('p', { class: 'muted' }, 'Nothing'));
     })));
 }
+// Petit bouton « ? » : une explication courte du terme à côté
+const helpBtn = (term, text) => h('button', { class: 'icon', type: 'button', 'aria-label': `What is ${term}?`, title: `What is ${term}?`, onclick: () => popupRule(term, text) }, '?');
+// Accueil : une seule étape à la fois, selon ce qui manque
+function renderHomeNext() {
+  const box = document.getElementById('home-next');
+  if (!box) return;
+  const hasSection = state.projects.some(p => p.sections.length);
+  const hasTask = [state.inbox, ...state.projects.flatMap(p => p.sections)].some(s => s.tasks.length);
+  const k = key(today());
+  const plannedToday = [state.inbox, ...state.projects.flatMap(p => p.sections)].flatMap(s => s.tasks).some(t => t.today === k);
+  let step = null;
+  if (!state.projects.length) step = ['Step 1 of 4: create a project', 'Give it a name and an end date.', 'plan'];
+  else if (!hasSection) step = ['Step 2 of 4: add a section', 'A section holds the tasks of one project.', 'plan'];
+  else if (!hasTask) step = ['Step 3 of 4: add a task', 'Write one task in a section, with its duration.', 'plan'];
+  else if (!plannedToday) step = ['Step 4 of 4: plan today', 'Pick the tasks for today in the slots on Today.', 'today'];
+  box.replaceChildren(...(step ? [h('div', { class: 'card stack' },
+    h('strong', {}, step[0]),
+    h('p', { class: 'muted' }, step[1]),
+    h('button', { class: 'btn', type: 'button', onclick: () => showTab(step[2]) }, step[2] === 'today' ? 'Go to Today' : 'Go to Projects'))] : []));
+}
 function renderWeek() {
   const mon = addDays(mondayOf(today()), weekOffset * 7);
   const days = [...Array(7)].map((_, i) => addDays(mon, i)), keys = days.map(key);
@@ -2235,7 +2287,7 @@ function renderWeek() {
       h('button', { class: 'ghost', 'aria-label': 'Next week', disabled: weekOffset >= 0, onclick: () => { weekOffset++; render(); } }, '›')),
     weekOffset ? h('button', { class: 'ghost', onclick: () => { weekOffset = 0; render(); } }, 'Back to this week') : null);
 
-  document.getElementById('week').replaceChildren(nav, weekGrid(days),
+  document.getElementById('week').replaceChildren(nav, weekGrid(days), weeklyReviewCard(mon), ...prepBlocks(),
     h('div', { class: 'card' },
       h('strong', {}, `Tasks done (${done.length})`),
       done.length ? null : h('p', { class: 'muted' }, 'Nothing ticked this week yet. Tick a task when it is done to see it here.'),
@@ -2275,7 +2327,7 @@ function renderWeek() {
 
 /* ---------- Général ---------- */
 function render() {
-  renderToday(); renderTasks(); renderSections(); renderProjects(); renderReview(); renderWeek(); renderCalendar(); renderTimer();
+  renderToday(); renderTasks(); renderSections(); renderProjects(); renderHomeNext(); renderWeek(); renderCalendar(); renderTimer();
   document.querySelector('section:not([hidden]) [data-edit]')?.focus(); // champ en cours de modification
 }
 
@@ -2454,8 +2506,8 @@ document.addEventListener('keydown', e => {
 });
 const tabs = [...document.querySelectorAll('.tabs button')];
 // Deux niveaux : Today | Plan (Tasks, Sections, Projects) | Bilan (Review, Week)
-const subOf = { plan: ['tasks', 'sections', 'projects'], bilan: ['review', 'week'] };
-const currentSub = { plan: 'tasks', bilan: 'review' };
+const subOf = { plan: ['tasks', 'sections', 'projects'], bilan: ['week'] };
+const currentSub = { plan: 'tasks', bilan: 'week' };
 function showSub(group, id) {
   currentSub[group] = id;
   document.querySelectorAll(`.subtabs[data-group="${group}"] button`)
@@ -2465,15 +2517,17 @@ function showSub(group, id) {
 function showTab(id, sub) {
   try { localStorage.setItem('tab', id); } catch { /* stockage indisponible : pas de mémoire d'onglet */ }
   tabs.forEach(x => x.setAttribute('aria-selected', String(x.dataset.tab === id)));
-  ['today', 'plan', 'bilan', 'calendar'].forEach(s => { document.getElementById(s).hidden = s !== id; });
+  ['home', 'today', 'plan', 'bilan', 'calendar'].forEach(s => { document.getElementById(s).hidden = s !== id; });
   if (subOf[id]) showSub(id, sub || currentSub[id]);
   scrollTo(0, 0);
 }
 tabs.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+// Boutons « Open … » de la page Home
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.go)));
 // Au rechargement, on rouvre l'onglet où l'on était
 try {
   const last = localStorage.getItem('tab');
-  if (last && ['today', 'plan', 'bilan', 'calendar'].includes(last)) showTab(last);
+  if (last && ['home', 'today', 'plan', 'bilan', 'calendar'].includes(last)) showTab(last);
 } catch { /* pas de mémoire disponible */ }
 document.querySelectorAll('.subtabs button').forEach(b =>
   b.addEventListener('click', () => showSub(b.closest('.subtabs').dataset.group, b.dataset.sub)));
@@ -2490,4 +2544,4 @@ applyBanner();
 applyBackground();
 buildMusic();
 INBOX.name = state.inbox.name || INBOX.name;
-document.getElementById('brush').addEventListener('click', bannerPicker); // minuteur : décompte, et fin automatique
+ // minuteur : décompte, et fin automatique

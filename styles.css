@@ -468,3 +468,90 @@
   /* Today : le « + » est centré dans sa carte ; le panneau prend toute la largeur */
   .slot-add { display: flex; flex-direction: column; align-items: center; }
   .slot-add .slot-panel { align-self: stretch; }
+
+  /* Today : une tâche placée dans une colonne prend la même carte que les cases « + » (même bord, même hauteur, même alignement) */
+  .slots-3 .tasks { list-style: none; margin: 0; padding: 0; }
+  .slots-3 .tasks li { display: flex; align-items: center; gap: 10px; min-height: 122px; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 12px; padding: 12px 16px; margin: 0 0 17px; }
+  .slots-3 .tasks li .grip { display: none; }
+  .slots-3 .tasks li label { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .slot-add { min-height: 122px; box-sizing: border-box; justify-content: center; }
+
+  /* Cases « + » : carte entière cliquable, en pointillés, avec le texte « Click to add a task » */
+  .slot-add { border: 1px dashed var(--ink); background: transparent; cursor: pointer; }
+  .slot-add:hover, .slot-add:focus-visible { background: #f5f5f0; }
+  .slot-add .slot-panel { cursor: auto; }
+  .slot-hint { display: flex; flex-direction: column; align-items: center; font-size: 1.8rem; line-height: 1; color: var(--grey); }
+  .slot-hint small { font-size: .85rem; margin-top: 6px; font-family: var(--hand); }
+
+  /* Page Home : logo cliquable, et six routines en cartes */
+  .brand-link { background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; min-height: 0; }
+  #home .sub { font-size: 1.1rem; margin: 0 0 24px; }
+  #home .routines { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  #home .routines .card { border-top: 1px solid var(--ink); padding: 18px 0; }
+  #home .routines p { margin: 6px 0; }
+  #home .routines button { margin-top: 8px; }
+
+  /* Magazine : en-tête de Today, sommaire et articles de la page Home */
+  #home .cover { border-top: 3px double var(--ink); padding: 12px 0 18px; border-bottom: 1px solid var(--ink); margin-bottom: 20px; }
+  #home .kicker { display: block; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--grey); }
+  #home .cover-title { font: 700 2.4rem/1.1 "Libre Baskerville", Georgia, serif; margin: 6px 0; }
+  #home .dek { font: italic 1.1rem/1.4 "Libre Baskerville", Georgia, serif; display: block; }
+  #home .contents { margin: 0 0 24px; }
+  #home .contents ol { margin: 6px 0 0 20px; }
+  #home .contents a { color: var(--ink); }
+  #home .story { border-top: 1px solid var(--ink); padding: 14px 0; }
+  #home .story summary { list-style: none; cursor: pointer; display: grid; gap: 4px; }
+  #home .story summary::-webkit-details-marker { display: none; }
+  #home .story .headline { font: 700 1.5rem/1.2 "Libre Baskerville", Georgia, serif; }
+  #home .story .dek { font-size: 1rem; color: var(--grey); font-style: normal; font-family: inherit; }
+  #home .story details[open] .headline::after { content: "  —"; }
+  #home .story details > :not(summary) { margin: 10px 0 0; max-width: 62ch; }
+
+  /* Today : carte de tâche en trois zones (taille et durée, titre, barre de temps) */
+  .slots-3 .tasks li.slot-task { display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; gap: 10px; min-height: 122px; box-sizing: border-box; border: 1px solid var(--ink); border-radius: 12px; padding: 12px 16px; margin: 0 0 17px; }
+  .slot-task .slot-top { display: flex; justify-content: space-between; align-items: center; }
+  .slot-task .size { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--grey); }
+  .slot-task .slot-title { font-size: 1.2rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .slot-task .bar { display: block; height: 4px; background: #e6e6e0; border-radius: 2px; overflow: hidden; }
+  .slot-task .bar i { display: block; height: 100%; background: var(--ink); }
+  .slot-task.is-done .slot-title { text-decoration: line-through; color: var(--grey); }
+  .slot-task.is-done .bar i { background: #2E7D57; }
+  .slot-task .slot-foot { display: flex; align-items: center; gap: 12px; }
+  .slot-task .slot-foot .bar { flex: 1; }
+  .slot-task .start-link { flex: none; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; color: var(--ink); }
+
+  /* Kanban : trois colonnes */
+  .kb-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 12px; }
+  .kb-col { border: 1px solid var(--ink); border-radius: 12px; padding: 12px 14px; min-height: 120px; box-sizing: border-box; }
+  .kb-col strong { font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; }
+  .kb-list { list-style: none; margin: 8px 0 0; padding: 0; }
+  .kb-list li { padding: 8px 0; border-bottom: 1px solid #e6e6e0; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+  .kb-list li .done { text-decoration: line-through; color: var(--grey); }
+  @media (max-width: 600px) { .kb-board { grid-template-columns: 1fr; } }
+
+  /* Mots-clés : le nom et le compte sont alignés sur la même ligne */
+  details.grow > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  details.grow > summary .ctx { display: inline; }
+
+  /* Mots-clés : une ligne par mot-clé, avec une icône qui ouvre ses tâches */
+  .kw-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 6px 0; border-bottom: 1px solid #e6e6e0; }
+  .kw-row .ctx { display: inline; }
+  .kw-open { margin-left: auto; min-height: 36px; min-width: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--ink); border-radius: 999px; }
+
+  /* Sections : chaque section se déplie sous son nom */
+  .sec-fold > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; cursor: pointer; padding: 6px 0; }
+  .sec-fold .sec-title { font-size: 1.1rem; font-weight: 600; cursor: grab; }
+
+  /* Projets : le titre se déplie */
+  .proj-fold > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; cursor: pointer; padding: 4px 0; list-style: none; }
+  .proj-fold > summary::-webkit-details-marker { display: none; }
+  .proj-fold > summary h3 { margin: 0; }
+
+  /* Boutons principaux : texte centré dans le contour, y compris dans les cartes */
+  .btn, .card > .btn:only-of-type, .stack > .btn { padding-left: 18px; padding-right: 18px; text-align: center; }
+
+  /* PARA : quatre catégories sur la carte projet */
+  .para { margin: 12px 0; }
+
+  /* Date de fin obligatoire : libellé avec astérisque */
+  .dateField { display: inline-flex; align-items: center; gap: 8px; }

@@ -1,0 +1,2101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My projects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Hanken+Grotesk:wght@400;600;700&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* DA de base (carrousels) : pages noir ou blanc purs, Libre Baskerville + Hanken Grotesk,
+     couleurs de catégorie, filets fins, ni cartes ni ombres ni dégradés.
+     Touches carnet : croquis de sapins à l'encre, ronds tracés à la main, petites notes manuscrites. */
+  :root {
+    --ink: #111111; --grey: #5a5a5a; --soft: #8a8a8a;
+    --title: "Libre Baskerville", Georgia, serif;
+    --hand: "Caveat", "Segoe Print", cursive;
+  }
+  #today { --tone: #8A6D12; --light: #F7EBB0; }
+  #tasks { --tone: #2E7D57; --light: #A8D5BA; }
+  #sections { --tone: #2F5F98; --light: #BFD7F2; }
+  #projects { --tone: #5E4A9A; --light: #D9C9F2; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ink); color: var(--ink); font: 17px/1.5 "Hanken Grotesk", system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 40px 16px 72px; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+
+  /* Onglets : simples libellés sur le noir, dans le ton clair de leur partie */
+  .tabs { display: flex; gap: 36px; padding: 0 64px 18px; }
+  .tabs button {
+    background: none; border: 0; padding: 4px 0; font-weight: 600; font-size: .95rem;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--soft);
+  }
+  .tabs button:hover { color: #fff; }
+  .tabs { flex-wrap: wrap; row-gap: 6px; }
+  .tabs [data-tab="today"][aria-selected="true"] { color: #F7EBB0; }
+  .tabs [data-tab="plan"][aria-selected="true"] { color: #A8D5BA; }
+  .tabs [data-tab="bilan"][aria-selected="true"] { color: #F4C2D7; }
+  .tabs [data-tab="calendar"][aria-selected="true"] { color: #BFD7F2; }
+  /* Onglets à l'intérieur d'une page : même style, soulignés à la couleur de leur partie */
+  .subtabs { display: flex; flex-wrap: wrap; gap: 6px 26px; margin: 0 0 28px; }
+  .subtabs button {
+    background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 0;
+    font-weight: 600; font-size: .85rem; letter-spacing: .1em; text-transform: uppercase; color: var(--grey);
+  }
+  .subtabs button:hover { color: var(--ink); }
+  .subtabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+  .subtabs [data-sub="tasks"][aria-selected="true"] { color: #2E7D57; border-bottom-color: #2E7D57; }
+  .subtabs [data-sub="sections"][aria-selected="true"] { color: #2F5F98; border-bottom-color: #2F5F98; }
+  .subtabs [data-sub="projects"][aria-selected="true"] { color: #5E4A9A; border-bottom-color: #5E4A9A; }
+  .scale { gap: 6px; margin: 10px 0; }
+  .scale .ghost[aria-pressed="true"] { background: var(--tone); color: #fff; border-color: var(--tone); }
+  .badges { list-style: none; margin: 16px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; }
+  .badges li { display: flex; flex-direction: column; border-top: 1px solid var(--light); padding: 6px 0; color: var(--soft); }
+  .badges li.got { color: var(--ink); }
+  .badges li.got b::before { content: "✓ "; color: var(--tone); }
+  .badges b { font-weight: 600; }
+  .topline { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px 28px; padding: 30px 0; border-top: 1px solid var(--light); }
+  .topline details.game { flex: 1 1 260px; margin: 0; padding: 0; border: 0; }
+  .topline-wrap { border-top: 1px solid var(--light); }
+  .topline-wrap .topline { border-top: 0; padding-bottom: 12px; }
+  .streak-line { margin: 0 0 30px; }
+  /* Temps prévu et niveau : deux moitiés égales, séparées par un filet, textes centrés */
+  .topline { gap: 0; }
+  .topline > .ring, .topline > .grow { flex: 1 1 0; min-width: 0; text-align: center; padding: 0 16px; }
+  .topline > .ring { border-right: 1px solid var(--light); }
+  .topline > .grow strong { display: block; }
+  details.game > summary { list-style: none; cursor: pointer; }
+  details.game > summary::-webkit-details-marker { display: none; }
+  details.game > summary::after { content: "+"; font-size: 1.3rem; color: var(--tone); margin-left: 12px; }
+  details.game[open] > summary::after { content: "−"; }
+  details.game > summary strong { margin-bottom: 4px; }
+  @media (max-width: 600px) { .badges { grid-template-columns: 1fr; } }
+
+  /* Plusieurs parties sur une même page : titre, filet de couleur, liens pour sauter de l'une à l'autre */
+  html { scroll-behavior: smooth; }
+  .jump { display: flex; flex-wrap: wrap; gap: 4px 24px; margin: 0 0 8px; }
+  .jump a {
+    font-weight: 600; font-size: .85rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--grey); text-decoration: none; padding: 4px 0;
+  }
+  .jump a:hover { color: var(--ink); }
+  .part-title {
+    --tone: var(--ink); margin: 72px 0 0; padding-top: 24px; border-top: 3px solid var(--tone);
+    font: 400 2rem/1.2 var(--title); color: var(--ink);
+  }
+  .jump + .part-title { margin-top: 20px; }
+  #part-tasks { --tone: #2E7D57; }
+  #part-sections { --tone: #2F5F98; }
+  #part-projects { --tone: #5E4A9A; }
+
+  /* Page blanche, croquis à l'encre en haut */
+  .page {
+    padding: 112px 64px 56px;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='60' viewBox='0 0 360 60'%3E%3Cdefs%3E%3Cpath id='t' d='M0 0V-30M0-30l-6 10 4-1-7 10 5-1-6 9M0-30l6 10-4-1 7 10-5-1 6 9'/%3E%3C/defs%3E%3Cg fill='none' stroke='%23111111' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M0 54q20-4 40 0t40 0 40-2 40 2 40 0 40-1 40 1 40 0 40 0'/%3E%3Cuse href='%23t' transform='translate(20 54)'/%3E%3Cuse href='%23t' transform='translate(46 55) scale(.7)'/%3E%3Cuse href='%23t' transform='translate(72 54) scale(1.25)'/%3E%3Cuse href='%23t' transform='translate(120 54) scale(.8)'/%3E%3Cuse href='%23t' transform='translate(148 55) scale(1.05)'/%3E%3Cpath d='M182 54V32l9-9 9 9v22M187 54v-9h8v9M186 36h10M203 50l9 4M203 44l11 8M203 38l8 6'/%3E%3Cuse href='%23t' transform='translate(232 54) scale(.6)'/%3E%3Cuse href='%23t' transform='translate(256 54) scale(1.3)'/%3E%3Cuse href='%23t' transform='translate(290 55) scale(.85)'/%3E%3Cuse href='%23t' transform='translate(334 54)'/%3E%3C/g%3E%3C/svg%3E") repeat-x 64px 28px / auto 58px;
+  }
+  .sub { color: var(--grey); margin: 0 0 10px; }
+  h1 { font: 400 3.4rem/1.2 var(--title); margin: 0 0 40px; }
+
+  /* Pas de cartes : des blocs séparés par des filets */
+  .card { padding: 30px 0; border-top: 1px solid var(--light); }
+  section > .card:last-child, .part > .card:last-child { border-bottom: 1px solid var(--light); }
+  #projects .card:not(:first-child) { border-top-color: var(--ink); }
+
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; min-width: 0; }
+  form.row > input.grow { flex: 1 1 200px; } /* le champ principal garde sa place, le reste passe à la ligne */
+  /* Champs : lignes à remplir */
+  input[type=text], input[type=date] {
+    background: none; border: 0; border-bottom: 1px solid var(--ink); border-radius: 0; padding: 8px 0; min-width: 0;
+  }
+  input::placeholder { color: var(--soft); opacity: 1; }
+  select {
+    background: none; border: 0; padding: 6px 0; font-weight: 600; font-size: .85rem;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--tone);
+  }
+  input:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  input[type=text]:focus-visible, input[type=date]:focus-visible { outline: 0; border-bottom: 2px solid var(--tone); padding-bottom: 7px; }
+  .btn { background: none; border: 0; padding: 8px 0 8px 12px; font-weight: 700; color: var(--tone); }
+  .btn:hover { color: var(--ink); }
+  .ghost { background: none; border: 0; padding: 6px 8px; font-weight: 600; color: var(--grey); }
+  .ghost:hover:not(:disabled) { color: var(--ink); }
+  .ghost:disabled { opacity: .3; cursor: not-allowed; }
+  .icon { background: none; border: 0; color: var(--soft); padding: 4px 8px; font-size: 1.1rem; line-height: 1; }
+  .icon:hover { color: var(--ink); }
+
+  .bar { height: 3px; background: var(--light); }
+  .bar > i { display: block; height: 100%; background: var(--tone); transition: width .3s; }
+  .muted { color: var(--grey); font-size: .95rem; }
+  strong, .group { font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+  strong { display: block; font-size: .9rem; color: var(--tone); }
+  .empty { color: var(--grey); padding: 20px 0 4px; font: 500 1.5rem var(--hand); }
+
+  /* Tâches et sections */
+  #tasks .card:first-child { gap: 28px; }
+  .ring { font: 400 3.2rem/1 var(--title); }
+  .ctx { display: block; color: var(--grey); font-size: .85rem; }
+  .note { margin: 12px 0 0; font: 500 1.25rem/1.2 var(--hand); color: var(--grey); }
+  form select { border-bottom: 1px solid var(--ink); padding: 10px 0 9px; max-width: 100%; }
+  ul.secs { list-style: none; margin: 16px 0 0; padding: 0; }
+  ul.secs li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--light); overflow-wrap: anywhere; }
+  .proj-head h3.small { font-size: 1.5rem; }
+  summary { cursor: pointer; }
+  ul.secs details > form { margin: 0 0 14px; }
+  .add-sec { margin-top: 16px; padding-top: 8px; border-top: 1px solid var(--light); }
+  ul.secs summary { list-style: none; }
+  ul.secs summary::-webkit-details-marker { display: none; }
+  ul.secs summary .grow::before { content: "+ "; color: var(--tone); font-weight: 700; }
+  ul.secs details[open] summary .grow::before { content: "− "; }
+  .section > details > summary { padding: 10px 0 0; font-weight: 600; color: var(--grey); }
+  .section > details > form { margin-top: 12px; }
+  textarea {
+    flex: 1 1 100%; width: 100%; min-height: 110px; padding: 10px; resize: vertical;
+    font: inherit; color: inherit; background: none; border: 1px solid var(--ink); border-radius: 0;
+  }
+  textarea::placeholder { color: var(--soft); opacity: 1; }
+  textarea:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+  /* Cases à cocher : ronds tracés à la main */
+  ul.tasks input[type=checkbox] {
+    appearance: none; width: 26px; height: 26px; margin: 0; flex: none; display: grid; place-items: center; cursor: pointer;
+    border: 1.5px solid var(--ink); border-radius: 52% 48% 55% 45% / 47% 54% 46% 53%;
+  }
+  ul.tasks li:nth-child(even) input[type=checkbox] { border-radius: 46% 54% 44% 56% / 55% 45% 53% 47%; }
+  ul.tasks input[type=checkbox]:checked { background: var(--light); }
+  ul.tasks input[type=checkbox]:checked::after { content: "✓"; font: 700 1.3rem/1 var(--hand); }
+
+  /* Projets */
+  .proj-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+  .proj-head h3 { margin: 0; font: 400 1.9rem/1.2 var(--title); overflow-wrap: anywhere; }
+  .late { color: var(--ink); font-weight: 700; }
+  ul.tasks { list-style: none; margin: 12px 0 6px; padding: 0; }
+  ul.tasks li { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  ul.tasks label { flex: 1; display: flex; gap: 12px; align-items: center; min-width: 0; overflow-wrap: anywhere; }
+  ul.tasks .done { color: var(--soft); text-decoration: line-through; }
+  .section { border-top: 1px solid var(--light); margin-top: 20px; padding-top: 20px; }
+  .section h4 { margin: 0 auto 0 0; flex: 0 1 auto; font-size: .9rem; color: var(--tone); overflow-wrap: anywhere; }
+  .group { font-size: .95rem; letter-spacing: .1em; margin: 44px 0 14px; color: var(--tone); }
+  .group.active { color: #2E7D57; }
+  .group.recurring { color: #2F5F98; }
+  .group.waiting { color: #8A6D12; }
+  .group.dormant, .group.done { color: var(--grey); }
+  .warn strong { color: #8A6D12; }
+
+  /* Journée 1-3-5, matrice, fiche projet */
+  #today .card:first-child { gap: 28px; }
+  .icon.day { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .icon.day[aria-pressed="true"] { color: var(--tone); }
+  .views { margin: 18px 0 0; }
+  .views .ghost[aria-pressed="true"] { color: var(--tone); }
+  .matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
+  .quad { padding: 26px 0; border-top: 1px solid var(--light); min-width: 0; }
+  .quad .muted { margin: 2px 0 0; font-size: .85rem; }
+  .fact { margin: 4px 0; overflow-wrap: anywhere; }
+  .fact b { font-weight: 600; }
+  .fact + .row, .note + .row { margin-top: 14px; }
+  #toast {
+    position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 7;
+    max-width: min(560px, 92vw); padding: 14px 20px; background: var(--ink); color: #fff; border: 1px solid #fff;
+  }
+  @media (max-width: 600px) { .matrix { grid-template-columns: 1fr; } }
+
+  /* Rituels, revue, déclencheurs, archives */
+  #review { --tone: #9C3F6C; --light: #F4C2D7; }
+  .subtabs [data-sub="review"][aria-selected="true"], .subtabs [data-sub="week"][aria-selected="true"] { color: #9C3F6C; border-bottom-color: #9C3F6C; }
+  .stack input[type=text] { display: block; width: 100%; margin: 0 0 6px; }
+  .stack > .btn { padding-left: 0; margin-top: 10px; }
+  .card > .btn:only-of-type, .card > .ghost { padding-left: 0; }
+  .reprise { margin: 20px 0 6px; }
+  .reprise b, .q b { display: block; font-weight: 600; }
+  .q { margin: 22px 0 0; }
+  .q .muted { margin: 4px 0 0; }
+  textarea.small { min-height: 76px; margin-top: 8px; }
+  .fact { white-space: pre-line; }
+  input[type=number] { width: 4.5em; background: none; border: 0; border-bottom: 1px solid var(--ink); border-radius: 0; padding: 8px 0; }
+  .days { gap: 4px 14px; font-size: .92rem; }
+  .days input { accent-color: var(--tone); }
+  [hidden] { display: none !important; }
+  ul.secs li > span:first-child { flex: 1; min-width: 0; }
+  details.archives { margin-top: 16px; }
+  details.archives > summary { font-weight: 600; color: var(--grey); }
+
+  /* Calendrier */
+  #calendar { --tone: #2F5F98; --light: #BFD7F2; }
+  .grid-head, .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+  .grid-head span { font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--grey); text-align: center; }
+  .cell { background: none; border: 1px solid var(--light); min-height: 56px; padding: 4px 6px; text-align: left; display: flex; flex-direction: column; justify-content: space-between; color: var(--ink); font: inherit; cursor: pointer; }
+  .cell.empty { border: 0; cursor: default; }
+  .cell.now { border-color: var(--ink); }
+  .cell.sel { background: #f2f2f2; }
+  .cell .num { font-weight: 600; }
+  .cell .count { font-size: .75rem; color: var(--grey); }
+  #calendar .toolbar { margin-bottom: 4px; }
+  /* Bannière personnalisable */
+  .page { position: relative; }
+  .brush { position: absolute; top: 14px; right: 18px; background: #fff; z-index: 2; font-size: .8rem; }
+  dialog.banner-picker { border: 2px solid var(--ink); border-radius: 0; padding: 24px; width: min(520px, 92vw); color: var(--ink); }
+  dialog.banner-picker::backdrop { background: rgba(0, 0, 0, .5); }
+  dialog.banner-picker .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+  dialog.banner-picker .opt { height: 76px; border: 1px solid var(--ink); background: #fff center / auto 58px repeat-x; cursor: pointer; padding: 0; }
+  dialog.banner-picker .opt[aria-pressed="true"] { outline: 2px solid var(--tone, #111); outline-offset: 2px; }
+  dialog.banner-picker .opt span { display: block; background: #fff; font-size: .75rem; padding: 2px 4px; text-align: left; }
+  /* Outils attachés à un projet, une section ou une tâche */
+  details.library > summary, details.linked > summary { font-weight: 600; font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: var(--tone); cursor: pointer; padding: 6px 0; }
+  details.library > summary { color: var(--ink); }
+  form.row > details.linked { flex-basis: 100%; margin: 6px 0; }
+  details.linked .cat { margin: 8px 0; }
+  details.linked .chk { display: inline-flex; align-items: center; gap: 6px; margin: 4px 14px 4px 0; }
+  ol.steps li label { display: inline-flex; gap: 8px; align-items: flex-start; }
+  ol.steps li input[type=checkbox] { margin-top: 5px; accent-color: var(--tone); flex: none; }
+  ol.steps li.ok > label > span { text-decoration: line-through; color: var(--soft); }
+  ol.steps li button { margin-left: 8px; padding: 0 6px; font-size: .8rem; }
+  details.tool-panel { margin: 8px 0 4px; }
+  details.tool-panel > summary { font-weight: 600; font-size: .85rem; color: var(--tone); padding: 4px 0; cursor: pointer; }
+  ul.tasks li { flex-wrap: wrap; }
+  ul.tasks details.tool-panel { flex-basis: 100%; padding-left: 36px; }
+  .smart { display: block; margin: 10px 0 0; }
+  .smart > span { display: block; font-size: .85rem; }
+  .smart input[type=text] { width: 100%; }
+  select.addm { margin: 12px 0 0; }
+  .technique { border-top: 1px solid var(--light); margin-top: 14px; padding-top: 12px; }
+  .technique p { margin: 4px 0 0; font-size: .92rem; }
+  ol.steps { margin: 8px 0 0 20px; padding: 0; color: var(--grey); font-size: .92rem; }
+  ol.steps li { margin: 2px 0; }
+
+  /* Minuteur et bilan de la semaine */
+  #timer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-wrap: wrap; align-items: center;
+    gap: 8px 16px; padding: 12px 20px; background: var(--ink); color: #fff; border-top: 1px solid #fff;
+  }
+  #timer .grow { flex: 1 1 100%; overflow-wrap: anywhere; }
+  #timer .big { font: 400 1.8rem/1 var(--title); margin-right: auto; }
+  .bar.soft > i { background: var(--soft); }
+  #timer .ghost { color: #fff; border: 1px solid #777; padding: 6px 12px; }
+  #timer .ghost:hover { border-color: #fff; color: #fff; }
+  body:has(#timer:not([hidden])) main { padding-bottom: 300px; }
+  .hits { list-style: none; margin: 6px 0 0; padding: 0; }
+  .hits li { border-top: 1px solid var(--light); padding: 6px 0; }
+  .hits small { display: block; }
+  .search { margin-top: 8px; }
+  input[type=number].mins { width: 5em; }
+  #timer .pomo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; width: 100%; }
+  #music { position: fixed; right: 16px; bottom: 150px; z-index: 8; width: 280px; padding: 12px; background: #111; color: #fff; border-radius: 12px; }
+  #music select, #music input[type=text] { color: #fff; background: none; border: 0; border-bottom: 1px solid #777; border-radius: 0; width: 100%; margin-top: 8px; }
+  #music option { color: #111; }
+  #music .mctl { gap: 6px; margin: 8px 0 0; }
+  #music .mctl button { color: #fff; border-color: #777; font-size: .75rem; }
+  #music input::placeholder { color: #aaa; }
+  #timer input[type=number] { width: 5em; color: #fff; background: none; border: 0; border-bottom: 1px solid #777; border-radius: 0; }
+  #week { --tone: #9C3F6C; --light: #F4C2D7; }
+  .stat { display: grid; grid-template-columns: 6.5em 1fr 5em; gap: 12px; align-items: center; padding: 5px 0; overflow-wrap: anywhere; }
+  .stat > span:last-child { text-align: right; }
+  .dots { margin: 4px 0; letter-spacing: .3em; }
+  .dots b { display: inline-block; width: 6.5em; letter-spacing: normal; font-weight: 600; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  textarea[readonly] { color: var(--grey); }
+  @media (max-width: 600px) { .stat { grid-template-columns: 5em 1fr 4em; gap: 8px; } }
+
+  /* Saisie rapide, modification, sauvegarde */
+  form.edit { flex: 1; padding: 6px 0; }
+  .proj-head + form.edit, form.edit + .row { margin-bottom: 14px; }
+  .data { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 40px; }
+
+  @media (max-width: 600px) {
+    .tabs { padding: 0 20px 14px; gap: 24px; }
+    .page { padding: 100px 20px 36px; background-position: 20px 24px; }
+    h1 { font-size: 2.3rem; margin-bottom: 28px; }
+    .ring { font-size: 2.4rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="today" aria-selected="true">Today</button>
+    <button role="tab" data-tab="plan" aria-selected="false">Plan</button>
+    <button role="tab" data-tab="bilan" aria-selected="false">Review</button>
+    <button role="tab" data-tab="calendar" aria-selected="false">Calendar</button>
+  </div>
+
+  <div class="page">
+    <button id="brush" class="ghost brush" type="button" aria-label="Customize the banner">Brush</button>
+    <h1 id="page-title"></h1>
+    <section id="today"></section>
+    <section id="plan" hidden>
+      <div class="subtabs" role="tablist" data-group="plan">
+        <button role="tab" data-sub="tasks" aria-selected="true">Tasks</button>
+        <button role="tab" data-sub="sections" aria-selected="false">Sections</button>
+        <button role="tab" data-sub="projects" aria-selected="false">Projects</button>
+      </div>
+      <section id="tasks" hidden></section>
+      <section id="sections" hidden></section>
+      <section id="projects" hidden></section>
+    </section>
+    <section id="bilan" hidden>
+      <div class="subtabs" role="tablist" data-group="bilan">
+        <button role="tab" data-sub="review" aria-selected="true">Review</button>
+        <button role="tab" data-sub="week" aria-selected="false">Week</button>
+      </div>
+      <section id="review" hidden></section>
+      <section id="week" hidden></section>
+    </section>
+    <section id="calendar" hidden></section>
+    <footer class="data">
+      <button id="export" class="ghost" type="button">Export my data</button>
+      <button id="import" class="ghost" type="button">Import</button>
+      <input type="file" id="file" accept="application/json,.json" hidden>
+    </footer>
+  </div>
+</main>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<div id="timer" hidden></div>
+
+<script>
+const KEY = 'habit-tracker-v1';
+// Statuts et types de projet (sprint 6) : 3 projets actifs au maximum
+const STATUSES = [['active', 'Active'], ['recurring', 'Recurring'], ['waiting', 'Waiting'], ['dormant', 'Dormant'], ['done', 'Done']];
+const TYPES = [['internal', 'Internal project'], ['training', 'Training'], ['pro', 'Work project'], ['ideas', 'Ideas']];
+const MAX_ACTIVE = 3;
+// Matrice d'Eisenhower : une case par tâche, ou aucune tant qu'elle n'est pas triée
+const QUADS = [['', 'Unsorted'], ['do', 'Urgent and important'], ['plan', 'Important, not urgent'], ['frame', 'Urgent, not important'], ['drop', 'Neither important nor urgent']];
+const QUAD_TITLES = { do: 'Do now', plan: 'Plan', frame: 'Delegate or frame', drop: 'Drop' };
+const MAX_PRIORITIES = 5; // tâches « à traiter maintenant » au-delà desquelles on alerte
+// Journée 1-3-5 : 1 grande tâche, 3 moyennes, 5 petites
+const SIZES = [['', 'Size'], ['L', 'Big'], ['M', 'Medium'], ['S', 'Small']];
+const SLOTS = { L: 1, M: 3, S: 5 };
+const SLOT_FULL = { L: 'its big task', M: 'its 3 medium tasks', S: 'its 5 small tasks' };
+const DURATIONS = [['', 'Duration'],['15', '15 min'], ['30', '30 min'], ['45', '45 min'], ['60', '1 h'], ['90', '1 h 30'], ['120', '2 h']];
+// Méthodes de productivité et de coaching, à attacher à un projet. Chaque méthode donne une question et des étapes.
+const METHODS = [
+  { id: 'gtd', name: 'GTD', what: 'Capture, clarify, organise, review, act: keep nothing in your head.', steps: ['Write down everything that needs your attention, in the inbox', 'For each item: is it actionable? If so, what is the next action?', 'Put it in the right project', 'Review it every week', 'Act according to context and available time'] },
+  { id: 'okr', name: 'OKR', what: 'An inspiring objective, and three measurable key results.', steps: ['Objective: one sentence that makes you want to act', 'Three key results, each with a number', 'A check-in every week, scored from 0 to 1', 'Adjust or drop it halfway'] },
+  { id: 'moscow', name: 'MoSCoW', what: 'Rank what the project contains: Must, Should, Could, Won\'t.', steps: ['Must: without it, the project fails', 'Should: important, but the project can live without it', 'Could: a bonus if time allows', 'Won\'t: decided not to do it for now'] },
+  { id: 'kanban', name: 'Kanban', what: 'See the workflow, and limit what is in progress.', steps: ['Three columns: to do, in progress, done', 'Two tasks in progress at most', 'Finish a task before starting another'] },
+  { id: 'para', name: 'PARA', what: 'Sort by use: Projects, Areas, Resources, Archives.', steps: ['Project: has an end and a date', 'Area: an ongoing responsibility', 'Resource: a topic you care about', 'Archive: finished or paused'] },
+  { id: 'pomodoro', name: 'Pomodoro', what: 'Work in short blocks, with a real break.', steps: ['Choose one task only', 'Run 25 minutes without interruption (here, a 60 min focus adapts)', '5-minute break', 'After four blocks, a longer break'] },
+  { id: 'blocks', name: 'Time blocking', what: 'Reserve a slot in your calendar for each type of work.', steps: ['List the types of work in the project', 'Block a slot for each one', 'Treat the slot like an appointment'] },
+  { id: 'frog', name: 'Eat the frog', what: 'Start with the hardest or most important task.', steps: ['Identify the task that costs you the most', 'Do it first, before messages', 'The rest of the day is easier'] },
+  { id: 'pareto', name: 'Pareto 80/20', what: 'Find the 20% of actions that produce 80% of the results.', steps: ['List what really moved the project forward', 'Keep the actions that matter most', 'Reduce or drop the rest'] },
+  { id: 'woop', name: 'WOOP', what: 'Wish, outcome, obstacle, plan: anticipate what will block you.', steps: ['Wish: what I want', 'Outcome: what I gain from it', 'Obstacle: what may block me', 'Plan: if [obstacle], then I do [action]'] },
+  { id: 'timebox', name: 'Timeboxing', what: 'Give a task a fixed duration, and stop when it is done.', steps: ['Set the duration before starting', 'Stop at the end, even if it is not perfect', 'Decide what comes next instead of extending'] },
+];
+// Contexte ou énergie d'une tâche, pour choisir selon l'état du moment
+const CONTEXTS = [['', 'Context'], ['5min', '5 minutes'], ['deep', 'Focus work'], ['phone', 'Phone'], ['low', 'Low energy']];
+// Contextes et catégories de projet : personnalisables (state.contexts, state.types). Les listes ci-dessus sont les défauts.
+const ctxOptions = () => [['', 'Contexte'], ...state.contexts.map(c => [c.id, c.name])];
+const filterOptions = () => [['', 'All contexts'],...state.contexts.map(c => [c.id, c.name])];
+const typeOptions = () => state.types.map(c => [c.id, c.name]);
+const ctxName = id => state.contexts.find(c => c.id === id)?.name || '';
+// Saisie d'un nom à côté d'une liste : remplace prompt(), que le navigateur peut bloquer
+function askName(anchor, label, onName) {
+  const submit = () => {
+    const v = input.value.trim();
+    if (!v) return;
+    box.remove();
+    onName(v);
+  };
+  const input = h('input', { type: 'text', maxlength: 60, placeholder: label, 'aria-label': label, onkeydown: e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } } });
+  const box = h('div', { class: 'row inline-new' }, input,
+    h('button', { class: 'ghost', type: 'button', onclick: submit }, 'Create'),
+    h('button', { class: 'ghost', type: 'button', onclick: () => box.remove() }, 'Cancel'));
+  anchor.after(box);
+  input.focus();
+}
+// Ajoute un contexte, sans doublon
+function addContext(v) {
+  const same = state.contexts.find(c => c.name.toLowerCase() === v.toLowerCase());
+  if (same) return same;
+  const c = { id: uid(), name: v };
+  state.contexts.push(c);
+  persist();
+  return c;
+}
+// Menu des contextes avec une option « + Nouveau contexte… » qui crée le contexte sur place
+function ctxPicker(name, picked, label) {
+  const sel = picker(name, [...ctxOptions(), ['__new', '+ New context…']], picked, label);
+  sel.addEventListener('change', () => {
+    if (sel.value !== '__new') return;
+    sel.value = picked || '';
+    askName(sel, 'Nom du contexte', v => {
+      const c = addContext(v);
+      if (!sel.querySelector(`option[value="${c.id}"]`)) sel.insertBefore(h('option', { value: c.id }, c.name), sel.querySelector('option[value="__new"]'));
+      sel.value = c.id;
+    });
+  });
+  return sel;
+}
+const typeName = id => state.types.find(c => c.id === id)?.name || '';
+let ctxFilter = '', weekOffset = 0;
+// Minuteurs (sprint 6) : focus de 60 à 90 min, plage d'urgence de 30 à 45 min ; « + 15 min » prolonge jusqu'au plafond
+const TIMER = { focus: { label: 'Focus', start: 60, max: 90 }, urgent: { label: 'Urgent block', start: 30, max: 45 } };
+// Déclencheurs : quand ils reviennent, et ce qu'ils créent
+const FREQS = [['weekly', 'Every week'], ['daily', 'Every day'], ['biweekly', 'Every 2 weeks'], ['monthly', 'Every month']];
+const MODES = [['section', 'Create a section with its tasks'], ['tasks', 'Add recurring tasks']];
+const DAY_LETTERS = [[1, 'Lun'], [2, 'Mar'], [3, 'Mer'], [4, 'Jeu'], [5, 'Ven'], [6, 'Sam'], [0, 'Dim']];
+// Routine de recherche active (sprint 4), proposée d'un clic puis modifiable
+const ROUTINE = [[1, 'Finish the Palmeraie sprint'], [2, 'Create LinkedIn content on what I learned'], [3, 'Add a proof of reliability'], [4, 'Comment on LinkedIn'], [5, 'Create Substack content']];
+// Revue du vendredi (sprint 6)
+const QUESTIONS = ['What is finished?', 'What is moving forward?', 'What is waiting on someone?', 'Which proof of reliability do I add?', 'What are my 3 priorities for next week?'];
+const INBOX = { inbox: true, name: 'Inbox' }; // faux projet qui porte la boîte de réception
+
+let state = { projects: [] };
+try { state = { ...state, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch {}
+let pickedSection = '', pickedProject = ''; // derniers choix des listes déroulantes
+let editing = null; // élément en cours de modification : 't:' | 's:' | 'p:' + id
+
+const persist = () => {
+  tidy();
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} // stockage indisponible : l'app reste utilisable
+};
+const save = () => { persist(); render(); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const key = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const fmt = (d, o) => d.toLocaleDateString('en-GB', o);
+const plural = (n, word) => `${n} ${word}${n > 1 ? 's' : ''}`;
+const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+const today = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+const WEEKDAYS = [[1, 'lundis'], [2, 'mardis'], [3, 'mercredis'], [4, 'jeudis'], [5, 'vendredis'], [6, 'samedis'], [0, 'dimanches']];
+function isoWeek(d) { // numéro de semaine ISO (la semaine commence le lundi)
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+  return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
+}
+
+// Blocs dépliés (sections, formulaire de déclencheur) : à retenir entre deux rendus
+const openIds = new Set();
+const foldable = (id, attrs = {}) => ({
+  ...attrs, open: openIds.has(id),
+  ontoggle: e => { e.target.open ? openIds.add(id) : openIds.delete(id); },
+});
+
+// Met des données (stockage ou fichier importé) au format actuel, sans rien perdre
+function normalize(st) {
+  st.projects = Array.isArray(st.projects) ? st.projects : [];
+  if (!Array.isArray(st.inbox?.tasks)) st.inbox = { id: 'inbox', name: INBOX.name, tasks: [] };
+  if (!st.days || typeof st.days !== 'object') st.days = {}; // rituels, jour par jour
+  if (!Array.isArray(st.reviews)) st.reviews = []; // revues du vendredi
+  if (!Array.isArray(st.log)) st.log = []; // temps mesuré par les minuteurs
+  if (!Array.isArray(st.customTools)) st.customTools = []; // outils créés par toi
+  if (!Array.isArray(st.contexts) || !st.contexts.length) st.contexts = CONTEXTS.slice(1).map(([id, name]) => ({ id, name }));
+  if (!Array.isArray(st.types) || !st.types.length) st.types = TYPES.map(([id, name]) => ({ id, name }));
+  if (!st.toolCats || typeof st.toolCats !== 'object') st.toolCats = {}; // catégories choisies pour les outils
+  if (!st.timer?.start) st.timer = null; // minuteur en cours
+  st.projects.forEach(p => {
+    p.triggers ||= [];
+    // Anciennes données : les méthodes et le cadre SMART deviennent des outils attachés au projet
+    p.tools ||= p.methods || [];
+    p.answers ||= {};
+    if (p.smart && !p.answers.smart) p.answers.smart = ['s', 'm', 'a', 'r', 't'].map(k => p.smart[k] || '');
+    p.triggers.forEach(tr => { // anciens déclencheurs : un seul jour, chaque semaine, une section
+      tr.freq ||= 'weekly'; tr.mode ||= 'section'; tr.days ||= [tr.day ?? 4]; tr.dom ||= 1;
+      tr.tasks ||= []; tr.name ||= ''; tr.anchor ||= tr.lastRun;
+    });
+    if (!p.sections) { // très anciennes données : tâches directement dans le projet
+      p.sections = p.tasks?.length ? [{ id: uid(), name: 'General', tasks: p.tasks }] : [];
+      delete p.tasks;
+    }
+    p.status = { doing: 'active', todo: 'waiting' }[p.status] || p.status; // anciens statuts
+    if (!STATUSES.some(([v]) => v === p.status)) p.status = 'waiting';
+    if (!st.types.some(c => c.id === p.type)) p.type = st.types[0]?.id || 'internal';
+  });
+  return st;
+}
+state = normalize(state);
+
+// Un projet contient des sections, une section contient des tâches ; la boîte de réception est à part
+const live = p => p.sections.filter(s => !s.archived); // sections non archivées
+const sections = () => state.projects.flatMap(p => live(p).map(s => ({ p, s })));
+// Une section entièrement cochée part aux archives le lendemain
+function tidy() {
+  const k = key(today());
+  for (const p of state.projects) for (const s of p.sections) {
+    if (!s.tasks.length || !s.tasks.every(t => t.done)) { delete s.doneAt; delete s.archived; }
+    else if (!s.doneAt) s.doneAt = k;
+    else if (s.doneAt < k) s.archived = true;
+  }
+}
+const mondayOf = d => addDays(d, -((d.getDay() + 6) % 7));
+const clock = () => new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+const fact = (label, value) => h('p', { class: 'fact' }, h('b', {}, label + ' : '), value);
+// Champ relié à une donnée : ce qu'on tape est gardé sans redessiner la page
+function bind(tag, obj, field, attrs) {
+  const el = h(tag, { ...attrs, oninput: e => { obj[field] = e.target.value; }, onchange: persist },
+    tag === 'textarea' ? (obj[field] || '') : null);
+  if (tag === 'input') el.setAttribute('value', obj[field] || '');
+  return el;
+}
+const places = () => [{ p: INBOX, s: state.inbox }, ...sections()];
+const placeLabel = ({ p, s }) => p.inbox ? p.name : `${p.name} · ${s.name}`;
+const tasks = () => places().flatMap(({ p, s }) => s.tasks.map(t => ({ p, s, t })));
+const hm = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}`;
+const shortDate = k => fmt(new Date(k + 'T00:00'), { day: 'numeric', month: 'short' });
+const isLate = t => !!t.due && !t.done && t.due < key(today());
+const sizeOf = t => t.size || 'S'; // sans taille, une tâche compte comme petite
+const byUrgency = (a, b) => (a.t.due || '9999').localeCompare(b.t.due || '9999'); // échéances proches d'abord
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 6000);
+}
+
+// Place une tâche dans la journée, ou l'en retire ; la règle 1-3-5 refuse le surplus
+function toggleToday(t) {
+  const k = key(today());
+  if (t.today === k) { delete t.today; return save(); }
+  const size = sizeOf(t);
+  const used = tasks().filter(x => x.t.today === k && sizeOf(x.t) === size).length;
+  if (used >= SLOTS[size]) return toast(`1-3-5 rule: today already has ${SLOT_FULL[size]}. Remove one, or change this task's size.`);
+  t.today = k;
+  save();
+}
+
+const shift = (list, item, dir) => { // monte ou descend un élément dans sa liste
+  const i = list.indexOf(item), j = i + dir;
+  if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  save();
+};
+const doneCount = list => list.filter(t => t.done).length;
+const pctOf = list => list.length ? Math.round(doneCount(list) / list.length * 100) : 0;
+
+// Petit helper DOM : h('div', {class:'x', onclick: fn}, enfants...)
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (v === true) el.setAttribute(k, '');
+    else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  el.append(...kids.flat().filter(k => k != null && k !== false));
+  return el;
+}
+
+function form(onsubmit, ...kids) {
+  return h('form', { class: 'row', onsubmit: e => { e.preventDefault(); onsubmit(e.target); } }, ...kids);
+}
+
+function picker(name, options, picked, label) {
+  return h('select', { name, 'aria-label': label },
+    options.map(([v, l]) => h('option', { value: v, selected: v === picked }, l)));
+}
+
+function progress(list, empty) {
+  const est = list.reduce((n, t) => n + (t.mins || 0), 0); // temps estimé, calculé à partir des tâches
+  return h('div', { class: 'row' },
+    h('div', { class: 'bar grow' }, h('i', { style: `width:${pctOf(list)}%` })),
+    h('span', { class: 'muted' }, list.length
+      ? `${doneCount(list)}/${list.length} · ${pctOf(list)} %${est ? ` · ${hm(est)} estimated` : ''}` : empty));
+}
+
+// Formulaire de modification en place : Entrée enregistre, Échap annule
+function editForm(onsave, ...fields) {
+  const cancel = () => { editing = null; render(); };
+  return h('form', {
+    class: 'row edit',
+    onsubmit: e => { e.preventDefault(); onsave(e.target); },
+    onkeydown: e => { if (e.key === 'Escape') cancel(); },
+  },
+    ...fields,
+    h('button', { class: 'btn' }, 'Save'),
+    h('button', { type: 'button', class: 'ghost', onclick: cancel }, 'Cancel'));
+}
+const arrows = (list, item) => [
+  h('button', { type: 'button', class: 'ghost', 'aria-label': 'Monter', title: 'Monter', onclick: () => shift(list, item, -1) }, '↑'),
+  h('button', { type: 'button', class: 'ghost', 'aria-label': 'Descendre', title: 'Descendre', onclick: () => shift(list, item, 1) }, '↓'),
+];
+const editButton = (id, label) =>
+  h('button', { class: 'icon', 'aria-label': label, title: 'Edit', onclick: () => { editing = id; render(); } }, '✎');
+
+// Outils : la bibliothèque intégrée, plus ceux que tu crées. Un outil peut poser des questions (fields),
+// dont les réponses sont gardées sur l'élément auquel il est attaché.
+const MORE_TOOLS = [
+  { id: 'smart', name: 'SMART', what: 'A precise, measurable, achievable, realistic and dated objective.', steps: ['Reread each question and answer in one sentence'], fields: ['Specific: who, what, where?', 'Measurable: which number proves it?', 'Achievable: with which resources?', 'Realistic: does it fit my week?', 'Time-bound: by when?'] },
+  { id: '2min', name: 'Two-minute rule', what: 'If a task takes less than two minutes, do it now.', steps: ['Spot small tasks when they arrive', 'Do them on the spot', 'Delegate or schedule the rest'] },
+  { id: 'premortem', name: 'Pre-mortem', what: 'Imagine the project has failed, and look for why before starting.', steps: ['Imagine the failure date', 'List the possible causes', 'Plan a counter-measure for each'], fields: ['If the project failed, the most likely cause would be…'] },
+  { id: 'ssc', name: 'Start, Stop, Continue', what: 'Three questions to improve how you work.', steps: ['What to start doing', 'What to stop', 'What works and should continue'], fields: ['Start', 'Stop', 'Continue'] },
+  { id: 'dod', name: 'Definition of "done"', what: 'Write what must be true to say it is finished.', steps: ['Write the end criteria', 'Check them before ticking'], fields: ['What must be true to say "done"'] },
+  { id: 'swot', name: 'SWOT', what: 'Strengths, weaknesses, opportunities, threats.', steps: ['Fill in the four boxes', 'Keep one action for each threat'], fields: ['Strengths', 'Weaknesses', 'Opportunities', 'Threats'] },
+  { id: 'raci', name: 'RACI', what: 'Who does, who approves, who is consulted, who is informed.', steps: ['One person responsible per task', 'One approver only'], fields: ['Responsible (R)', 'Approver (A)', 'Consulted (C)', 'Informed (I)'] },
+];
+const FIELDS = {
+  okr: ['Objective, in one sentence', 'Key result 1 (with a number)', 'Key result 2 (with a number)', 'Key result 3 (with a number)'],
+  woop: ['Wish: what I want', 'Outcome: what I gain', 'Obstacle: what may block me', 'Plan: if [obstacle], then I do [action]'],
+};
+const EXTRA_TOOLS = [
+  { id: 'eisen', name: 'Eisenhower matrix', what: 'Sort what is urgent and important, to decide what to do first.', steps: ['List the items to handle', 'Place each one in one of the four boxes', 'Handle the "do now" box first'] },
+];
+// Catégorie par défaut, et sections que l'outil peut créer dans un projet
+const CATS = { smart: 'Frame', okr: 'Frame', dod: 'Frame', premortem: 'Frame', raci: 'Frame', woop: 'Reflect', ssc: 'Reflect', swot: 'Reflect', eisen: 'Prioritise', moscow: 'Prioritise', pareto: 'Prioritise', '2min': 'Execute', frog: 'Execute', pomodoro: 'Execute', timebox: 'Execute', blocks: 'Plan', kanban: 'Plan', gtd: 'Plan', para: 'Plan' };
+const SECTIONS = { kanban: ['À faire', 'En cours', 'Fait'], moscow: ['Must', 'Should', 'Could', 'Won\'t'], swot: ['Forces', 'Faiblesses', 'Opportunités', 'Menaces'], eisen: ['Faire maintenant', 'Planifier', 'Déléguer ou cadrer', 'Supprimer'], gtd: ['Capturer', 'Clarifier', 'Organiser', 'Revoir', 'Agir'], para: ['Projets', 'Domaines', 'Ressources', 'Archives'], okr: ['Objectif', 'Résultats clés'], ssc: ['Commencer', 'Arrêter', 'Continuer'], raci: ['Responsable', 'Approbateur', 'Consulté', 'Informé'], pareto: ['Ce qui compte', 'À réduire'], woop: ['Souhait', 'Résultat', 'Obstacle', 'Plan'], premortem: ['Causes possibles', 'Parades'], dod: ['Critères de fin'] };
+const DEFAULT_CATS = ['Frame', 'Prioritise', 'Plan', 'Execute', 'Reflect'];
+const allTools = () => [...METHODS, ...MORE_TOOLS, ...EXTRA_TOOLS, ...(state.customTools || [])]
+  .map(t => ({
+    ...t,
+    fields: t.fields || FIELDS[t.id] || [],
+    steps: t.steps || [],
+    sections: t.sections || SECTIONS[t.id] || [],
+    cat: (state.toolCats || {})[t.id] || t.cat || CATS[t.id] || 'Other',
+  }));
+const toolById = id => allTools().find(t => t.id === id);
+// Liste déroulante groupée par catégorie
+function toolOptions(list) {
+  return [...new Set(list.map(t => t.cat))].map(c =>
+    h('optgroup', { label: c }, list.filter(t => t.cat === c).map(t => h('option', { value: t.id }, t.name))));
+}
+// Crée dans le projet les sections que l'outil propose, sans toucher à celles qui existent déjà
+function scaffold(p, t) {
+  const have = p.sections.map(s => s.name);
+  const missing = t.sections.filter(n => !have.includes(n));
+  missing.forEach(n => p.sections.push({ id: uid(), name: n, tasks: [] }));
+  save();
+  toast(missing.length ? `Sections created: ${missing.join(', ')}.` : 'These sections already exist in this project.');
+}
+// Outils du projet : c'est ici qu'on les ajoute pour construire ensuite ses sections et ses tâches
+function projectTools(p) {
+  p.tools ||= [];
+  p.answers ||= {};
+  const chosen = p.tools.map(toolById).filter(Boolean);
+  const free = allTools().filter(t => !p.tools.includes(t.id));
+  return h('div', { class: 'ptools' },
+    h('strong', {}, 'Project tools'),
+    h('p', { class: 'muted' }, 'The tools that frame this project. Those that propose sections can create them in one click.'),
+    free.length ? h('select', { 'aria-label': 'Add a tool to the project', class: 'addm', onchange: e => {
+      if (!e.target.value) return;
+      p.tools.push(e.target.value);
+      save();
+    } }, h('option', { value: '' }, 'Add a tool…'), toolOptions(free)) : null,
+    chosen.map(t => h('div', {},
+      t.sections.length ? h('div', { class: 'row' },
+        h('button', { class: 'ghost', onclick: () => scaffold(p, t) }, `Create sections: ${t.sections.join(' · ')}`)) : null,
+      toolCard(p, t))));
+}
+
+// Un outil attaché à un élément : description, étapes, et questions à remplir
+// Une étape devient une tâche : dans la section si l'élément en est une, sinon dans la boîte de réception
+function stepToTask(obj, t, i) {
+  const dest = Array.isArray(obj.tasks) ? obj : state.inbox;
+  dest.tasks.push({ id: uid(), text: `${t.steps[i]} · ${t.name}`, done: false });
+  save();
+  toast(dest === state.inbox ? 'Step added to the inbox.' : 'Step added to the section.');
+}
+function toolCard(obj, t) {
+  const ans = obj.answers[t.id] ||= [];
+  const prog = ((obj.progress ||= {})[t.id] ||= []); // étapes cochées
+  const doneN = t.steps.filter((_, i) => prog[i]).length;
+  return h('div', { class: 'technique' },
+    h('div', { class: 'row' }, h('strong', {}, t.name),
+      t.steps.length ? h('span', { class: 'muted' }, `${doneN}/${t.steps.length}`) : null,
+      h('button', { class: 'icon', 'aria-label': `Remove the tool ${t.name}`, onclick: () => { obj.tools = obj.tools.filter(x => x !== t.id); save(); } }, '×')),
+    t.what ? h('p', { class: 'muted' }, t.what) : null,
+    t.fields.map((label, i) => h('div', { class: 'smart' },
+      h('span', { class: 'muted' }, label),
+      bind('input', ans, i, { type: 'text', maxlength: 200, 'aria-label': `${t.name} : ${label}` }))),
+    t.steps.length ? h('ol', { class: 'steps' }, t.steps.map((s, i) => h('li', { class: prog[i] ? 'ok' : '' },
+      h('label', {},
+        h('input', { type: 'checkbox', checked: !!prog[i], 'aria-label': `Step done: ${s}`, onchange: () => { prog[i] = !prog[i]; save(); } }),
+        h('span', {}, s)),
+      h('button', { class: 'ghost', type: 'button', 'aria-label': `Turn into a task: ${s}`, onclick: () => stepToTask(obj, t, i) }, '→ task')))) : null);
+}
+// Panneau d'outils, pour un projet, une section ou une tâche
+function toolPanel(obj, label, art = 'ce') {
+  obj.tools ||= [];
+  obj.answers ||= {};
+  const chosen = obj.tools.map(toolById).filter(Boolean);
+  const free = allTools().filter(t => !obj.tools.includes(t.id));
+  return h('details', foldable('tool-' + obj.id, { class: 'tool-panel' }),
+    h('summary', {}, chosen.length ? `Tools · ${chosen.map(t => t.name).join(', ')}` : `Add tools to ${art} ${label}`),
+    free.length ? h('select', { 'aria-label': `Add a tool to ${art} ${label}`, class: 'addm', onchange: e => {
+      if (!e.target.value) return;
+      obj.tools.push(e.target.value);
+      save();
+    } }, h('option', { value: '' }, 'Add a tool…'), toolOptions(free)) : null,
+    chosen.map(t => toolCard(obj, t)));
+}
+
+// Retire un outil de la bibliothèque personnelle, et de tous les éléments qui l'utilisent
+function removeCustomTool(id) {
+  state.customTools = state.customTools.filter(t => t.id !== id);
+  const items = [state.inbox, ...state.projects, ...state.projects.flatMap(p => p.sections)];
+  items.forEach(x => { if (x.tools) x.tools = x.tools.filter(t => t !== id); });
+  state.projects.flatMap(p => p.sections).concat(state.inbox).forEach(s => s.tasks.forEach(t => { if (t.tools) t.tools = t.tools.filter(x => x !== id); }));
+  save();
+}
+// Mes outils : créer les siens, avec ses étapes et ses questions
+// Liste modifiable (renommer, ajouter, supprimer). Une valeur déjà utilisée ne peut pas être supprimée.
+function countUse(field, id) {
+  if (field === 'tag') return tasks().filter(x => x.t.tag === id).length;
+  return state.projects.filter(p => p.type === id).length;
+}
+function editableList(listKey, title, noun, field) {
+  const rows = state[listKey].map(c => h('li', {},
+    h('input', { type: 'text', value: c.name, maxlength: 40, 'aria-label': `Nom du ${noun}`, onchange: e => {
+      const v = e.target.value.trim();
+      if (!v) return render();
+      c.name = v;
+      save();
+    } }),
+    h('button', { class: 'icon', 'aria-label': `Delete ${noun} ${c.name}`, onclick: () => {
+      const used = countUse(field, c.id);
+      if (used) return toast(`Used by ${used} item${used > 1 ? 's' : ''}: change it first.`);
+      state[listKey] = state[listKey].filter(x => x !== c);
+      save();
+    } }, '×')));
+  const add = form(f => {
+    const name = f.elements.name.value.trim();
+    if (!name) return;
+    state[listKey].push({ id: uid(), name });
+    save();
+  },
+    h('input', { type: 'text', name: 'name', class: 'grow', placeholder: `New ${noun}`, maxlength: 40, 'aria-label': `New ${noun}` }),
+    h('button', { class: 'btn' }, 'Add'));
+  return h('div', { class: 'cat' }, h('strong', {}, title), h('ul', { class: 'secs' }, rows), add);
+}
+function settingsCard() {
+  return h('details', foldable('settings', { class: 'card stack library' }),
+    h('summary', {}, 'Inbox and categories'),
+    h('p', { class: 'muted' }, 'Rename the inbox, and add, rename or delete your project categories.'),
+    h('div', { class: 'cat' }, h('strong', {}, 'Inbox'),
+      h('input', { type: 'text', value: state.inbox.name, maxlength: 40, 'aria-label': 'Inbox name', onchange: e => {
+        const v = e.target.value.trim();
+        if (!v) return render();
+        state.inbox.name = v;
+        INBOX.name = v;
+        save();
+      } })),
+    editableList('types', 'Project categories', 'category', 'type'));
+}
+
+function libraryCard() {
+  const create = form(f => {
+    const name = f.elements.name.value.trim();
+    if (!name) return f.elements.name.focus();
+    state.customTools.push({
+      id: 'c-' + uid(), name, what: f.elements.what.value.trim(), cat: 'My tools',
+      steps: f.elements.steps.value.split('\n').map(x => x.trim()).filter(Boolean),
+      fields: f.elements.fields.value.split('\n').map(x => x.trim()).filter(Boolean),
+      sections: f.elements.sections.value.split('\n').map(x => x.trim()).filter(Boolean),
+    });
+    save();
+  },
+    h('input', { type: 'text', name: 'name', class: 'grow', placeholder: 'Tool name', maxlength: 60, 'aria-label': 'Tool name' }),
+    h('input', { type: 'text', name: 'what', class: 'grow', placeholder: 'What it is for', maxlength: 160, 'aria-label': 'Tool description' }),
+    h('textarea', { name: 'steps', placeholder: 'Steps, one per line (optional)', 'aria-label': 'Tool steps' }),
+    h('textarea', { name: 'fields', placeholder: 'Questions to answer, one per line (optional)', 'aria-label': 'Tool questions' }),
+    h('textarea', { name: 'sections', placeholder: 'Sections it creates, one per line (optional)', 'aria-label': 'Sections created by the tool' }),
+    h('button', { class: 'btn' }, 'Create tool'));
+
+  // Un outil, sa catégorie modifiable, et sa suppression s'il est personnel
+  const row = t => h('li', { class: 'lib' },
+    h('details', foldable('lib-' + t.id, { class: 'grow' }),
+      h('summary', {}, h('strong', {}, t.name), t.what ? h('span', { class: 'muted' }, ` · ${t.what}`) : null),
+      t.steps.length ? h('ol', { class: 'steps' }, t.steps.map(s => h('li', {}, s))) : null,
+      t.fields.length ? h('p', { class: 'muted' }, `Questions : ${t.fields.join(' · ')}`) : null,
+      t.sections.length ? h('p', { class: 'muted' }, `Suggested sections: ${t.sections.join(' · ')}`) : null),
+    h('select', { 'aria-label': `Category of ${t.name}`, onchange: e => {
+      const sel = e.target;
+      if (sel.value !== '__new') { state.toolCats[t.id] = sel.value; return save(); }
+      sel.value = t.cat;
+      askName(sel, 'Category name', c => { state.toolCats[t.id] = c; save(); });
+    } },
+      [...new Set([...DEFAULT_CATS, ...allTools().map(x => x.cat)])].map(c => h('option', { value: c, selected: c === t.cat }, c)),
+      h('option', { value: '__new' }, '+ New category…')),
+    t.id.startsWith('c-') ? h('button', { class: 'icon', 'aria-label': `Delete the tool ${t.name}`, onclick: () => {
+      if (confirm(`Delete the tool "${t.name}" wherever it is attached?`)) removeCustomTool(t.id);
+    } }, '×') : null);
+
+  const cats = [...new Set(allTools().map(t => t.cat))];
+  // Repliée par défaut : elle ne s'ouvre que si on la demande
+  return h('details', foldable('library', { class: 'card stack library' }),
+    h('summary', {}, 'Tool library'),
+    h('p', { class: 'muted' }, 'All tools, sorted by category. Change a tool\'s category if you file it differently. To use one, add it to a project under "Project tools".'),
+    cats.map(c => h('div', { class: 'cat' },
+      h('strong', {}, `${c} (${allTools().filter(t => t.cat === c).length})`),
+      h('ul', { class: 'secs' }, allTools().filter(t => t.cat === c).map(row)))),
+    h('details', foldable('create-tool'),
+      h('summary', {}, 'Create a personal tool'),
+      create));
+}
+
+// Déclencheur créé d'un clic depuis une tâche, une section ou un projet. Il se modifie ensuite dans Projects.
+// La première occurrence tombe la semaine suivante : la tâche ou la section existe déjà.
+function triggerFrom(p, origin) {
+  const now = today();
+  const tr = {
+    id: uid(), mode: origin.mode, freq: 'weekly', days: [now.getDay()], dom: 1,
+    name: origin.name || '', tasks: origin.tasks, anchor: key(now), lastRun: key(now),
+  };
+  p.triggers.push(tr);
+  save();
+  toast(`Recurrence created: ${triggerLabel(tr)}. Edit it in Sections.`);
+}
+const recurButton = (p, origin, label) => h('button', {
+  class: 'icon day', 'aria-label': `Create a recurrence: ${label}`, title: 'Create a recurrence',
+  onclick: () => triggerFrom(p, origin),
+}, 'Recur.');
+function deleteSection(p, s) {
+  if (s.tasks.length && !confirm(`Delete the section "${s.name}" and its ${plural(s.tasks.length, 'task')}?`)) return;
+  p.sections = p.sections.filter(x => x !== s);
+  save();
+}
+
+function taskItem(s, t, ctx) {
+  if (editing === 't:' + t.id) return h('li', {}, editForm(f => {
+    const text = f.elements.text.value.trim();
+    if (!text) return;
+    Object.assign(t, {
+      text, due: f.elements.due.value, quad: f.elements.quad.value,
+      size: f.elements.size.value, mins: Number(f.elements.mins.value) || 0,
+    });
+    const dest = places().find(x => x.s.id === f.elements.dest.value)?.s;
+    if (dest && dest !== s) { s.tasks = s.tasks.filter(x => x !== t); dest.tasks.push(t); }
+    editing = null;
+    save();
+  },
+    h('input', { type: 'text', name: 'text', class: 'grow', value: t.text, maxlength: 120, 'aria-label': 'Task text', 'data-edit': true }),
+    picker('dest', places().map(x => [x.s.id, placeLabel(x)]), s.id, 'Move the task to'),
+    h('input', { type: 'date', name: 'due', value: t.due || '', 'aria-label': 'Due date (optional)', title: 'Due date (optional)' }),
+    picker('quad', QUADS, t.quad || '', 'Quadrant d\'Eisenhower'),
+    picker('size', SIZES, t.size || '', 'Task size'),
+    h('input', { type: 'number', name: 'mins', min: 0, max: 1440, step: 5, value: t.mins || '', placeholder: 'min', 'aria-label': 'Estimated duration in minutes', class: 'mins' }),
+    arrows(s.tasks, t)));
+
+  const planned = t.today === key(today());
+  const meta = [
+    ctx,
+    t.due && h('span', { class: isLate(t) ? 'late' : '' }, isLate(t) ? `overdue (${shortDate(t.due)})` : `due ${shortDate(t.due)}`),
+    t.size && SIZES.find(([v]) => v === t.size)[1].toLowerCase(),
+    t.spent ? (t.mins ? `${hm(t.spent)} spent of ${hm(t.mins)}` : `${hm(t.spent)} spent`) : t.mins && hm(t.mins),
+    t.quad && QUAD_TITLES[t.quad].toLowerCase(),
+  ].filter(Boolean).flatMap((m, i) => i ? [' · ', m] : [m]);
+
+  return h('li', {},
+    h('label', {},
+      h('input', { type: 'checkbox', checked: t.done, onchange: () => {
+        t.done = !t.done;
+        t.done ? t.doneAt = key(today()) : delete t.doneAt; // sert à la revue de la semaine
+        save();
+      } }),
+      h('span', { class: t.done ? 'done' : '' }, t.text, meta.length ? h('small', { class: 'ctx' }, meta) : null)),
+    (planned || !t.done) && h('button', {
+      class: 'icon day', 'aria-pressed': String(planned), 'aria-label': `${planned ? 'Remove from' : 'Add to'} today: ${t.text}`,
+      title: planned ? 'Remove from today' : 'Do today', onclick: () => toggleToday(t),
+    }, 'Today'),
+    !t.done && h('button', {
+      class: 'icon day', 'aria-label': `Start a Pomodoro on: ${t.text}`, title: 'Focus: choose 25 min, 50 min or custom',
+      onclick: () => askFocus(t),
+    }, 'Focus'),
+    toolPanel(t, 'task', 'this'),
+    (() => { // une tâche rangée dans un projet peut devenir récurrente
+      const hit = findTask(t.id);
+      return !t.done && hit && !hit.p.inbox ? recurButton(hit.p, { mode: 'tasks', tasks: [t.text] }, t.text) : null;
+    })(),
+    editButton('t:' + t.id, `Edit task ${t.text}`),
+    h('button', { class: 'icon', 'aria-label': `Delete task ${t.text}`, onclick: () => { s.tasks = s.tasks.filter(x => x !== t); save(); } }, '×'));
+}
+
+/* ---------- Minuteur : plages de focus et d'urgence ----------
+   Le minuteur est gardé dans les données : il survit à un rechargement de la page.
+   Le temps passé s'ajoute à la tâche et au journal, qui nourrit le bilan de la semaine. */
+const BASE_TITLE = document.title;
+const ctxOk = () => true; // les contextes ont été retirés de l'app
+function findTask(id) {
+  for (const p of [INBOX, ...state.projects]) for (const s of (p.inbox ? [state.inbox] : p.sections)) {
+    const t = s.tasks.find(x => x.id === id);
+    if (t) return { p, s, t };
+  }
+  return null;
+}
+const clockMs = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; };
+
+/* ---------- Pomodoro : 25 min de travail, 5 de pause, 15 après quatre cycles ----------
+   Gardé dans les données : il survit au rechargement. Chaque bloc de travail fini s'ajoute au temps
+   de la tâche et au journal de la semaine. */
+const POMO = { work: 25, short: 5, long: 15 };
+const phaseMs = m => m * 6e4;
+const pomoLeft = tm => tm.running ? tm.left - (Date.now() - tm.runAt) : tm.left;
+// Focus : on choisit d'abord la durée (25 min, 50 min ou personnalisée), puis le chrono démarre
+let focusPick = null; // { tid, text } : tâche dont on choisit la durée
+function askFocus(t) {
+  if (state.timer) return toast('A timer is already running: finish or cancel it first.');
+  focusPick = { tid: t.id, text: t.text };
+  render();
+}
+function renderChooser(el) {
+  const custom = h('input', { type: 'number', min: 5, max: 240, value: 40, class: 'mins', 'aria-label': 'Custom duration in minutes' });
+  const go = m => {
+    const hit = findTask(focusPick.tid);
+    focusPick = null;
+    startPomo(hit ? hit.t : null, m);
+  };
+  el.replaceChildren(h('div', { class: 'pomo' },
+    h('div', { class: 'grow' }, h('b', {}, 'Focus'), ` · ${focusPick.text}`),
+    h('button', { class: 'ghost', onclick: () => go(25) }, '25 min'),
+    h('button', { class: 'ghost', onclick: () => go(50) }, '50 min'),
+    custom,
+    h('button', { class: 'ghost', onclick: () => go(Math.max(5, Math.min(240, Number(custom.value) || 25))) }, 'Start custom'),
+    h('button', { class: 'ghost', onclick: () => { focusPick = null; render(); } }, 'Cancel')));
+}
+
+// Recherche dans le tableau des tâches : la liste apparaît dès que la barre est sélectionnée
+function taskFinder() {
+  const input = h('input', { type: 'search', class: 'grow', placeholder: 'Search a task to plan or do', 'aria-label': 'Search a task' });
+  const hits = h('ul', { class: 'hits' });
+  const draw = () => {
+    const q = input.value.trim().toLowerCase();
+    const list = tasks().filter(x => !x.t.done && (!q || x.t.text.toLowerCase().includes(q))).sort(byUrgency).slice(0, 10);
+    hits.replaceChildren(...list.map(x => h('li', {},
+      h('span', {}, x.t.text), h('small', { class: 'ctx' }, ` ${placeLabel(x)}`),
+      h('span', { class: 'row' },
+        h('button', { class: 'ghost', type: 'button', onclick: () => toggleToday(x.t) }, x.t.today === key(today()) ? 'Remove from today' : 'Today'),
+        h('button', { class: 'ghost', type: 'button', onclick: () => askFocus(x.t) }, 'Focus')))));
+  };
+  input.addEventListener('input', draw);
+  input.addEventListener('focus', draw);
+  return h('div', { class: 'card' }, h('strong', {}, 'Task search'), input, hits);
+}
+
+// Bibliothèque : les tâches déjà faites, avec le temps moyen. « Charger » en refait une dans la boîte de réception.
+function taskLibraryCard() {
+  const all = [state.inbox, ...state.projects.flatMap(p => p.sections)].flatMap(s => s.tasks);
+  const nameOf = t => (t.from ? t.text.replace(/ · [^·]+$/, '') : t.text).trim(); // une récurrente garde son nom sans le repère de semaine
+  const groups = new Map();
+  for (const t of all) {
+    const k = nameOf(t).toLowerCase();
+    const g = groups.get(k) || { name: nameOf(t), done: 0, spent: [], est: [] };
+    if (t.done) { g.done++; if (t.spent) g.spent.push(t.spent); }
+    if (t.mins) g.est.push(t.mins);
+    groups.set(k, g);
+  }
+  const avg = a => a.length ? Math.round(a.reduce((n, x) => n + x, 0) / a.length) : 0;
+  const rows = [...groups.values()].filter(g => g.done > 0).sort((a, b) => b.done - a.done);
+  return h('details', foldable('taskLib', { class: 'card library' }),
+    h('summary', {}, `Task library (${rows.length})`),
+    h('p', { class: 'muted' }, 'Tasks you have already done, with the average time they take. Load one to do it again.'),
+    rows.length ? h('ul', { class: 'secs' }, rows.map(g => {
+      const mean = avg(g.spent) || avg(g.est);
+      return h('li', {},
+        h('div', { class: 'grow' }, h('strong', {}, g.name),
+          h('div', { class: 'muted' }, `done ${g.done} time${g.done > 1 ? 's' : ''} · average ${mean ? hm(mean) : 'not timed yet'}${g.spent.length ? ` (from ${g.spent.length} timed)` : ''}`)),
+        h('button', { class: 'ghost', type: 'button', onclick: () => {
+          state.inbox.tasks.push({ id: uid(), text: g.name, done: false, ...(mean ? { mins: mean } : {}) });
+          save();
+          toast(`"${g.name}" loaded into the inbox${mean ? `, estimated at ${hm(mean)}` : ''}.`);
+        } }, 'Load'));
+    })) : h('p', { class: 'empty' }, 'No finished task yet.'));
+}
+
+function startPomo(task, work = POMO.work) {
+  if (state.timer) return toast('A timer is already running: finish or cancel it first.');
+  const hit = task && findTask(task.id);
+  state.timer = {
+    kind: 'pomo', work, phase: 'work', cycle: 1, nextLong: false, left: phaseMs(work), running: true, runAt: Date.now(),
+    tid: task?.id || null, label: task ? task.text : 'Focus', proj: hit ? hit.p.name : '',
+  };
+  save();
+}
+function logPomo(tm, mins) {
+  if (mins < 1) return;
+  state.log.push({ date: key(today()), kind: 'focus', mins, tid: tm.tid, label: tm.label, proj: tm.proj });
+  const hit = tm.tid && findTask(tm.tid);
+  if (hit) hit.t.spent = (hit.t.spent || 0) + mins;
+}
+// Phase suivante. `early` : la phase de travail est sautée avant la fin, on garde le temps déjà fait.
+function nextPomo(early) {
+  const tm = state.timer;
+  if (tm.phase === 'work') {
+    const W = tm.work || POMO.work;
+    logPomo(tm, early ? Math.round((phaseMs(W) - pomoLeft(tm)) / 6e4) : W);
+    tm.nextLong = tm.cycle === 4;
+    tm.phase = 'break';
+    tm.left = phaseMs(tm.nextLong ? POMO.long : POMO.short);
+    toast(tm.nextLong ? 'Four cycles done: 15 min long break.' : 'Break: 5 min.');
+  } else {
+    tm.cycle = tm.nextLong ? 1 : tm.cycle + 1;
+    tm.phase = 'work';
+    tm.left = phaseMs(tm.work || POMO.work);
+    toast('Back to work.');
+  }
+  tm.running = true;
+  tm.runAt = Date.now();
+  save();
+}
+function tickPomo() {
+  const tm = state.timer;
+  if (!tm || tm.kind !== 'pomo') return;
+  if (pomoLeft(tm) <= 0) return nextPomo(false);
+  const out = document.getElementById('timer-left');
+  if (out) out.textContent = clockMs(pomoLeft(tm));
+  document.title = `${clockMs(pomoLeft(tm))} · ${BASE_TITLE}`;
+}
+function pausePomo() {
+  const tm = state.timer;
+  if (tm.running) { tm.left = pomoLeft(tm); tm.running = false; tm.runAt = null; }
+  else { tm.running = true; tm.runAt = Date.now(); }
+  save();
+}
+function stopPomo() {
+  const tm = state.timer;
+  if (tm.phase === 'work') logPomo(tm, Math.round((phaseMs(tm.work || POMO.work) - pomoLeft(tm)) / 6e4));
+  state.timer = null;
+  document.title = BASE_TITLE;
+  save();
+}
+// Musique : lecteur YouTube officiel (IFrame API). Playlists et radios en direct, avec précédent, lecture/pause et suivant.
+const MUSIC_PRESETS = [
+  { id: 'lofi', name: 'Lofi Girl (radio en direct)', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk' },
+];
+let ytPlayer = null, ytPending = [];
+function parseYT(url) {
+  const list = /[?&]list=([\w-]+)/.exec(url || '');
+  if (list) return { list: list[1] };
+  const v = /(?:[?&]v=|youtu\.be\/|\/live\/)([\w-]{11})/.exec(url || '');
+  return v ? { video: v[1] } : null;
+}
+function loadYTApi(cb) {
+  if (window.YT && YT.Player) return cb();
+  ytPending.push(cb);
+  if (!document.getElementById('yt-api')) document.head.append(h('script', { id: 'yt-api', src: 'https://www.youtube.com/iframe_api' }));
+  window.onYouTubeIframeAPIReady = () => { ytPending.forEach(f => f()); ytPending = []; };
+}
+function playMusic(src) {
+  loadYTApi(() => {
+    if (ytPlayer && src.list && ytPlayer.loadPlaylist) return ytPlayer.loadPlaylist({ listType: 'playlist', list: src.list });
+    if (ytPlayer && src.video && ytPlayer.loadVideoById) return ytPlayer.loadVideoById(src.video);
+    if (ytPlayer && ytPlayer.destroy) ytPlayer.destroy();
+    document.getElementById('music-host').replaceChildren(h('div', { id: 'music-player' }));
+    ytPlayer = new YT.Player('music-player', {
+      width: '260', height: '146',
+      ...(src.list ? { playerVars: { listType: 'playlist', list: src.list, playsinline: 1, rel: 0 } }
+        : { videoId: src.video, playerVars: { playsinline: 1, rel: 0 } }),
+    });
+  });
+}
+// Le lecteur reste en place pendant un Focus : il n'est pas recréé à chaque mise à jour du bandeau
+function buildMusic() {
+  if (document.getElementById('music')) return;
+  const ctl = (label, fn) => h('button', { class: 'ghost', type: 'button', 'aria-label': label, onclick: fn }, label);
+  const radios = h('select', { 'aria-label': 'Radio ou playlist', onchange: e => {
+    const p = MUSIC_PRESETS.find(x => x.id === e.target.value);
+    if (!p) return;
+    state.music = p.url;
+    persist();
+    playMusic(parseYT(p.url));
+  } }, h('option', { value: '' }, 'Radios et playlists…'), MUSIC_PRESETS.map(p => h('option', { value: p.id }, p.name)));
+  const urlForm = h('form', { class: 'row', onsubmit: e => {
+    e.preventDefault();
+    const v = e.target.elements.url.value.trim();
+    const src = parseYT(v);
+    if (!src) return toast('This link cannot be played: paste a YouTube video, radio or playlist link.');
+    state.music = v;
+    persist();
+    playMusic(src);
+  } },
+    h('input', { type: 'text', name: 'url', class: 'grow', placeholder: 'YouTube link (video, radio or playlist)', value: state.music || '', 'aria-label': 'YouTube link' }),
+    h('button', { class: 'ghost' }, 'Lire'));
+  document.body.append(h('div', { id: 'music', hidden: true },
+    h('div', { id: 'music-host' }, h('div', { id: 'music-player' })),
+    h('div', { class: 'row mctl' },
+      ctl('Previous', () => ytPlayer?.previousVideo?.()),
+      ctl('Lecture / Pause', () => { if (ytPlayer?.getPlayerState) (ytPlayer.getPlayerState() === 1 ? ytPlayer.pauseVideo() : ytPlayer.playVideo()); }),
+      ctl('Suivant', () => ytPlayer?.nextVideo?.())),
+    radios, urlForm));
+}
+function renderPomo(el, tm) {
+  const phase = tm.phase === 'work' ? `Work · cycle ${tm.cycle}/4` : tm.nextLong ? 'Long break' : 'Break';
+  el.replaceChildren(
+    h('div', { class: 'pomo' },
+      h('div', { class: 'grow' }, h('b', {}, tm.phase === 'work' ? 'Focus' : 'Break'), ` · ${phase} · ${tm.label}${tm.proj ? ` · ${tm.proj}` : ''}`),
+      h('span', { id: 'timer-left', class: 'big' }, clockMs(pomoLeft(tm))),
+      h('button', { class: 'ghost', onclick: pausePomo }, tm.running ? 'Pause timer' : 'Resume'),
+      h('button', { class: 'ghost', onclick: () => nextPomo(true) }, tm.phase === 'work' ? 'Skip to break' : 'Skip break'),
+      h('button', { class: 'ghost', onclick: stopPomo }, 'Stop')));
+}
+
+function startTimer(kind, task) {
+  if (state.timer) return toast('A timer is already running: finish or cancel it first.');
+  const hit = task && findTask(task.id);
+  state.timer = {
+    kind, mins: TIMER[kind].start, start: Date.now(), tid: task?.id || null,
+    label: task ? task.text : 'Messages and interruptions', proj: hit ? hit.p.name : '',
+  };
+  save();
+}
+function endTimer(log) {
+  const tm = state.timer;
+  if (!tm) return;
+  state.timer = null;
+  const mins = Math.round(Math.min(Date.now() - tm.start, tm.mins * 6e4) / 6e4); // jamais plus que la durée prévue
+  if (log && mins >= 1) {
+    state.log.push({ date: key(new Date(tm.start)), kind: tm.kind, mins, tid: tm.tid, label: tm.label, proj: tm.proj });
+    const hit = tm.tid && findTask(tm.tid);
+    if (hit) hit.t.spent = (hit.t.spent || 0) + mins;
+    toast(`${hm(mins)} recorded (${TIMER[tm.kind].label.toLowerCase()}).`);
+  } else if (log) toast('Less than a minute: nothing recorded.');
+  document.title = BASE_TITLE;
+  save();
+}
+function tickTimer() {
+  const tm = state.timer;
+  if (!tm) return;
+  if (tm.kind === 'pomo') return tickPomo();
+  const left = tm.start + tm.mins * 6e4 - Date.now();
+  if (left <= 0) { endTimer(true); toast(`Time is up: ${TIMER[tm.kind].label.toLowerCase()} finished, ${hm(tm.mins)} recorded.`); return; }
+  const out = document.getElementById('timer-left');
+  if (out) out.textContent = clockMs(left);
+  document.title = `${clockMs(left)} · ${BASE_TITLE}`;
+}
+function renderTimer() {
+  const el = document.getElementById('timer'), tm = state.timer;
+  const music = document.getElementById('music');
+  if (music) music.hidden = !(tm && tm.kind === 'pomo');
+  if (!tm && focusPick) { el.hidden = false; return renderChooser(el); }
+  el.hidden = !tm;
+  if (!tm) return el.replaceChildren();
+  if (tm.kind === 'pomo') return renderPomo(el, tm);
+  const cfg = TIMER[tm.kind];
+  el.replaceChildren(
+    h('div', { class: 'grow' }, h('b', {}, cfg.label), ' · ', tm.label),
+    h('span', { id: 'timer-left', class: 'big' }, clockMs(tm.start + tm.mins * 6e4 - Date.now())),
+    tm.mins < cfg.max ? h('button', { class: 'ghost', onclick: () => { tm.mins = Math.min(cfg.max, tm.mins + 15); save(); } }, '+ 15 min') : null,
+    h('button', { class: 'ghost', onclick: () => endTimer(true) }, 'Terminer'),
+    h('button', { class: 'ghost', onclick: () => endTimer(false) }, 'Cancel'));
+}
+
+/* ---------- Déclencheurs ----------
+   À son rythme (chaque jour, certains jours, une semaine sur deux, chaque mois), un déclencheur
+   ajoute au projet soit une section « Nom S46 » avec ses tâches, soit de simples tâches
+   récurrentes rangées dans une section « Routines ». Tout porte le repère de la période (S46…).
+   La page n'agit que lorsqu'elle est ouverte : à l'ouverture, on rattrape les jours manqués. */
+function triggerHits(tr, d) {
+  if (tr.freq === 'daily') return true;
+  if (tr.freq === 'monthly') return d.getDate() === Math.min(tr.dom, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate());
+  if (!tr.days.includes(d.getDay())) return false;
+  if (tr.freq === 'biweekly') return Math.round((mondayOf(d) - mondayOf(new Date(tr.anchor + 'T00:00'))) / 6048e5) % 2 === 0;
+  return true;
+}
+const stamp = (tr, d) => tr.freq === 'daily' ? shortDate(key(d)) : tr.freq === 'monthly' ? fmt(d, { month: 'long' }) : 'S' + isoWeek(d);
+
+function runTriggers() {
+  const now = today(), nowKey = key(now);
+  let changed = false;
+  for (const p of state.projects) for (const tr of p.triggers) {
+    if (tr.lastRun === nowKey) continue;
+    let d = addDays(new Date(tr.lastRun + 'T00:00'), 1);
+    const floor = tr.freq === 'daily' ? now : addDays(now, -56); // rattrapage : 8 semaines, sauf le quotidien
+    if (d < floor) d = floor;
+    for (; d <= now; d = addDays(d, 1)) {
+      if (p.status === 'done' || p.status === 'dormant' || !triggerHits(tr, d)) continue;
+      const dk = key(d), tag = stamp(tr, d);
+      if (tr.mode === 'tasks') {
+        if (p.sections.some(s => s.tasks.some(t => t.from === tr.id && t.date === dk))) continue;
+        let s = p.sections.find(x => x.routine && !x.archived);
+        if (!s) p.sections.unshift(s = { id: uid(), name: 'Routines', routine: true, tasks: [] });
+        s.tasks.push(...tr.tasks.map(text => ({ id: uid(), text: `${text} · ${tag}`, done: false, due: dk, from: tr.id, date: dk })));
+      } else {
+        if (p.sections.some(s => s.from === tr.id && s.date === dk)) continue;
+        p.sections.unshift({
+          id: uid(), name: `${tr.name} ${tag}`, from: tr.id, date: dk,
+          tasks: tr.tasks.map(text => ({ id: uid(), text: `${text} · ${tag}`, done: false })),
+        });
+      }
+    }
+    tr.lastRun = nowKey;
+    changed = true;
+  }
+  return changed;
+}
+
+function triggerLabel(tr) {
+  const days = tr.days.map(n => WEEKDAYS.find(([v]) => v === n)[1]).join(', ');
+  const when = tr.freq === 'daily' ? 'Chaque jour'
+    : tr.freq === 'monthly' ? `Chaque mois, le ${tr.dom}`
+    : tr.freq === 'biweekly' ? `Every other week, on ${days}` : `Every ${days}`;
+  const what = tr.mode === 'tasks'
+    ? `${plural(tr.tasks.length, 'task')} (${tr.tasks.join(', ')})`
+    : `section "${tr.name}" with ${plural(tr.tasks.length, 'task')}`;
+  return `${when} : ${what}`;
+}
+
+// Formulaire de déclencheur : création, ou modification si `tr` est donné
+function triggerForm(p, tr) {
+  const v = tr || { mode: 'section', freq: 'weekly', days: [4], dom: 1, name: '', tasks: [] };
+  const sync = f => { // n'affiche que les champs utiles au choix en cours
+    const freq = f.elements.freq.value;
+    f.querySelector('.days').hidden = freq === 'daily' || freq === 'monthly';
+    f.elements.dom.hidden = freq !== 'monthly';
+    f.elements.name.hidden = f.elements.mode.value !== 'section';
+  };
+  const el = form(f => {
+    const mode = f.elements.mode.value, freq = f.elements.freq.value, name = f.elements.name.value.trim();
+    const tasks = f.elements.tasks.value.split('\n').map(x => x.trim()).filter(Boolean);
+    const days = [...f.querySelectorAll('.days input:checked')].map(i => Number(i.value));
+    if (mode === 'section' && !name) return f.elements.name.focus();
+    if (mode === 'tasks' && !tasks.length) return f.elements.tasks.focus();
+    if ((freq === 'weekly' || freq === 'biweekly') && !days.length) return toast('Coche au moins un jour de la semaine.');
+    const data = { mode, freq, days, dom: Math.min(31, Math.max(1, Number(f.elements.dom.value) || 1)), name, tasks };
+    if (tr) Object.assign(tr, data);
+    else p.triggers.push({ id: uid(), ...data, anchor: key(today()), lastRun: key(addDays(today(), -1)) }); // part dès aujourd'hui si c'est le bon jour
+    editing = null;
+    openIds.delete('trg-' + p.id);
+    runTriggers();
+    save();
+  },
+    picker('mode', MODES, v.mode, 'What the recurrence does'),
+    picker('freq', FREQS, v.freq, 'Frequency'),
+    h('span', { class: 'days row' }, DAY_LETTERS.map(([n, l]) =>
+      h('label', {}, h('input', { type: 'checkbox', value: n, checked: v.days.includes(n) }), ' ' + l))),
+    h('input', { type: 'number', name: 'dom', min: 1, max: 31, value: v.dom, 'aria-label': 'Jour du mois', title: 'Jour du mois' }),
+    h('input', { type: 'text', name: 'name', class: 'grow', value: v.name, placeholder: 'Section name (e.g. Comment on LinkedIn)', maxlength: 60, 'aria-label': 'Name of the created section' }),
+    h('textarea', { name: 'tasks', placeholder: 'One task per line (e.g. one LinkedIn account per line)', 'aria-label': 'Created tasks, one per line' }, v.tasks.join('\n')),
+    h('button', { class: 'btn' }, tr ? 'Save' : 'Create recurrence'),
+    tr && h('button', { type: 'button', class: 'ghost', onclick: () => { editing = null; render(); } }, 'Cancel'));
+  el.addEventListener('change', () => sync(el));
+  sync(el);
+  return el;
+}
+
+function triggerBlock(p) {
+  return h('div', { class: 'section' },
+    h('strong', {}, 'Recurrences'),
+    p.triggers.length ? h('ul', { class: 'secs' }, p.triggers.map(tr => editing === 'g:' + tr.id
+      ? h('li', {}, triggerForm(p, tr))
+      : h('li', {},
+        h('span', {}, triggerLabel(tr)),
+        editButton('g:' + tr.id, `Edit recurrence ${triggerLabel(tr)}`),
+        h('button', {
+          class: 'icon', 'aria-label': `Delete recurrence ${triggerLabel(tr)}`,
+          onclick: () => { p.triggers = p.triggers.filter(x => x !== tr); save(); },
+        }, '×')))) : null,
+    h('details', foldable('trg-' + p.id),
+      h('summary', {}, 'Add a recurrence'),
+      triggerForm(p)));
+}
+
+/* ---------- Gamification : un arbre qui pousse ----------
+   Les points ne sont pas stockés : ils se calculent à partir de tes données,
+   donc rien ne peut se décaler ni se compter deux fois. */
+const LEVELS = [[0, 'Seed'], [100, 'Sprout'], [300, 'Young tree'], [600, 'Tree'], [1000, 'Great tree'], [1800, 'Forest']];
+const BADGES = [
+  ['First seed', 'One task done', s => s.doneTasks >= 1],
+  ['Day started', '7 day starts', s => s.starts >= 7],
+  ['Day closed', '7 day closes', s => s.closes >= 7],
+  ['Five in one go', '5 tasks done in one day', s => s.maxDay >= 5],
+  ['Focused', '10 focus sessions', s => s.focus >= 10],
+  ['Looking back', 'One Friday review', s => s.reviews >= 1],
+  ['Four seasons', '4 Friday reviews', s => s.reviews >= 4],
+  ['Steady week', '7 days in a row with activity', s => s.streak >= 7],
+  ['Project wrapped', 'One project done', s => s.projectsDone >= 1],
+];
+function stats() {
+  const all = [state.inbox, ...state.projects.flatMap(p => p.sections)].flatMap(s => s.tasks);
+  const doneList = all.filter(t => t.done);
+  const perDay = {};
+  for (const t of doneList) if (t.doneAt) perDay[t.doneAt] = (perDay[t.doneAt] || 0) + 1;
+  const days = Object.values(state.days);
+  const s = {
+    doneTasks: doneList.length,
+    starts: days.filter(d => d.start).length,
+    closes: days.filter(d => d.close).length,
+    checkins: days.filter(d => d.energy || d.mood).length,
+    focus: state.log.filter(e => e.kind === 'focus').length,
+    minutes: state.log.reduce((n, e) => n + e.mins, 0),
+    reviews: state.reviews.length,
+    maxDay: Math.max(0, ...Object.values(perDay)),
+    projectsDone: state.projects.filter(p => p.status === 'done').length,
+  };
+  s.xp = s.doneTasks * 10 + s.minutes + (s.starts + s.closes) * 15 + s.checkins * 5 + s.reviews * 50;
+  // Série : jours d'affilée avec une activité, en comptant aujourd'hui ou hier
+  const active = new Set([
+    ...Object.keys(state.days).filter(k => { const d = state.days[k]; return d.start || d.close || d.energy || d.mood; }),
+    ...Object.keys(perDay), ...state.log.map(e => e.date),
+  ]);
+  let d = today();
+  if (!active.has(key(d))) d = addDays(d, -1);
+  s.streak = 0;
+  while (active.has(key(d))) { s.streak++; d = addDays(d, -1); }
+  return s;
+}
+// Niveau et XP, affichés à côté du temps prévu
+function levelBox() {
+  const s = stats();
+  const idx = LEVELS.findLastIndex(([min]) => s.xp >= min);
+  const [, name] = LEVELS[idx];
+  const next = LEVELS[idx + 1];
+  return h('div', { class: 'grow' },
+    h('strong', {}, `Level ${idx + 1} · ${name}`),
+    h('div', { class: 'muted' }, `${s.xp} XP${next ? ` · ${next[0] - s.xp} to « ${next[1]} »` : ' · top level'}`));
+}
+function gameCard() {
+  const s = stats();
+  const idx = LEVELS.findLastIndex(([min]) => s.xp >= min);
+  const [min, name] = LEVELS[idx];
+  const next = LEVELS[idx + 1];
+  const pct = next ? Math.round((s.xp - min) / (next[0] - min) * 100) : 100;
+  // Repliée : seul le niveau reste visible, le détail s'ouvre au clic
+  return h('details', foldable('game', { class: 'card game' }),
+    h('summary', { class: 'row' },
+      h('strong', {}, 'How levels and badges work'),
+    ),
+    h('div', { class: 'bar' }, h('i', { style: `width:${pct}%` })),
+    h('p', { class: 'muted' }, 'Task done 10 XP · focus minute 1 XP · day start or close 15 XP · check-in 5 XP · review 50 XP.'),
+    h('ul', { class: 'badges' }, BADGES.map(([title, how, ok]) => h('li', { class: ok(s) ? 'got' : '' },
+      h('b', {}, title), h('span', { class: 'muted' }, how)))));
+}
+
+/* ---------- Today : la journée en 1-3-5 ---------- */
+function renderToday() {
+  const k = key(today()), all = tasks();
+  const plan = all.filter(x => x.t.today === k);
+  const mins = plan.reduce((n, x) => n + (x.t.mins || 0), 0);
+  const noDur = plan.filter(x => !x.t.mins).length;
+
+  // Le temps prévu à gauche, le niveau à droite
+  const head = h('div', { class: 'topline' },
+    h('div', { class: 'ring', role: 'img', 'aria-label': `Planned time: ${hm(mins)}` }, hm(mins)),
+    levelBox());
+
+  // Une place libre se remplit en choisissant une tâche de la bonne taille, dans la liste
+  // Une place libre se remplit par recherche dans le tableau des tâches. La tâche prend la taille de la place.
+  const slot = (size, label) => {
+    const items = plan.filter(x => sizeOf(x.t) === size), free = SLOTS[size] - items.length;
+    const search = `Search a task for ${label.toLowerCase()}`;
+    const input = h('input', { type: 'search', class: 'grow', placeholder: search, 'aria-label': search });
+    const hits = h('ul', { class: 'hits' });
+    const draw = () => {
+      const q = input.value.trim().toLowerCase();
+      const list = all.filter(x => !x.t.done && x.t.today !== k && ctxOk(x.t) && (!q || x.t.text.toLowerCase().includes(q)))
+        .sort((a, b) => (sizeOf(a.t) === size ? 0 : 1) - (sizeOf(b.t) === size ? 0 : 1) || byUrgency(a, b))
+        .slice(0, 8);
+      hits.replaceChildren(...list.map(x => h('li', {},
+        h('button', { class: 'ghost', type: 'button', onclick: () => {
+          const used = all.filter(y => y.t.today === k && sizeOf(y.t) === size).length;
+          if (used >= SLOTS[size]) return toast(`This ${label.toLowerCase()} slot is full.`);
+          x.t.size = size;
+          toggleToday(x.t);
+        } }, x.t.text),
+        h('small', { class: 'ctx' }, ` ${placeLabel(x)} · ${SIZES.find(([v]) => v === sizeOf(x.t))[1].toLowerCase()}`))));
+    };
+    input.addEventListener('input', draw);
+    input.addEventListener('focus', draw);
+    return h('div', { class: 'card' },
+      h('strong', {}, `${label} (${items.length}/${SLOTS[size]})`),
+      h('ul', { class: 'tasks' }, items.map(x => taskItem(x.s, x.t, placeLabel(x)))),
+      free > 0 ? h('p', { class: 'note' }, `${free} slot${free > 1 ? 's' : ''} free`) : null,
+      free > 0 ? h('div', { class: 'search' }, input, hits) : null);
+  };
+
+  // Propositions, sans doublon : ce qui était prévu avant, ce qui arrive à échéance, ce qui est prioritaire
+  const seen = new Set(plan.map(x => x.t));
+  const pick = test => all.filter(x => !x.t.done && !seen.has(x.t) && ctxOk(x.t) && test(x.t) && seen.add(x.t)).sort(byUrgency);
+  const carried = pick(t => t.today && t.today < k);
+  const due = pick(t => t.due && t.due <= k);
+  const urgent = pick(t => t.quad === 'do');
+  const offer = (label, items) => items.length ? [h('div', { class: 'card' },
+    h('strong', {}, `${label} (${items.length})`),
+    h('ul', { class: 'tasks' }, items.map(x => taskItem(x.s, x.t, placeLabel(x)))))] : [];
+
+  // Rituels (sprint 4) : on lance la journée une fois les tâches choisies, on la ferme par écrit
+  const day = state.days[k] ||= {};
+  // Check-in du matin : énergie et humeur, sur 5. Une énergie basse allège la journée, sans l'interdire.
+  const scale = field => h('div', { class: 'row scale' },
+    h('span', { class: 'muted' }, field === 'energy' ? 'Energy (1 low, 5 high)' : 'Mood (1 to 5)'),
+    [1, 2, 3, 4, 5].map(n => h('button', {
+      class: 'ghost', type: 'button', 'aria-pressed': String(day[field] === n),
+      'aria-label': `${field === 'energy' ? 'Energy' : 'Mood'} ${n} out of 5`,
+      onclick: () => { day[field] = n; save(); },
+    }, String(n))));
+  const lowEnergy = day.energy && day.energy <= 2
+    ? h('p', { class: 'note' }, 'Low energy today: keep one big task and two small ones at most. A calmer day counts too.') : null;
+  const start = day.start
+    ? h('div', { class: 'card' }, h('p', { class: 'note' }, `Day started at ${day.start}.`), lowEnergy)
+    : h('div', { class: 'card stack' },
+      h('strong', {}, 'Start-of-day ritual'),
+      h('p', { class: 'muted' }, 'Before opening messages: check in with yourself, choose your tasks, then start the day.'),
+      scale('energy'), scale('mood'), lowEnergy,
+      h('button', { class: 'btn', onclick: () => {
+        if (!plan.length) return toast('Pick at least one task for today first.');
+        day.start = clock();
+        save();
+      } }, 'Start my day'));
+
+  const actives = state.projects.filter(p => p.status === 'active');
+  const text = (obj, field, label) => bind('input', obj, field, { type: 'text', placeholder: label, 'aria-label': label, maxlength: 200 });
+  const close = day.close
+    ? h('div', { class: 'card' },
+      h('strong', {}, `Day closed at ${day.close}`),
+      day.did ? fact('Done', day.did) : null,
+      day.left ? fact('Left', day.left) : null,
+      day.grateful ? fact('Gratitude', day.grateful) : null,
+      h('button', { class: 'ghost', onclick: () => { delete day.close; save(); } }, 'Reopen the day'))
+    : h('div', { class: 'card stack' },
+      h('strong', {}, 'End-of-day ritual'),
+      h('p', { class: 'muted' }, '15 minutes at the end of the day: two lines to stop thinking about it, then a handover note for each active project.'),
+      text(day, 'did', 'What got done'),
+      text(day, 'left', 'What is left'),
+      text(day, 'grateful', 'One thing I am grateful for'),
+      actives.map(p => h('div', { class: 'reprise' },
+        h('b', {}, p.name),
+        text(p, 'where', 'Where I am'),
+        text(p, 'next', 'My next action'),
+        text(p, 'block', 'What is blocking'))),
+      h('button', { class: 'btn', onclick: () => { day.close = clock(); save(); } }, 'Close the day'));
+
+  // Plages mesurées aujourd'hui, et lancement d'une plage d'urgence
+  const tracked = kind => state.log.filter(e => e.date === k && e.kind === kind).reduce((n, e) => n + e.mins, 0);
+  const slots = h('div', { class: 'card' },
+    h('strong', {}, 'Time blocks today'),
+    h('p', { class: 'muted' }, `Focus ${hm(tracked('focus'))} · Urgent ${hm(tracked('urgent'))}`),
+    h('p', { class: 'muted' }, 'Focus: one project, one task, notifications off, started with “Focus” on a task. Urgent: a buffer for messages and interruptions.'),
+    h('button', { class: 'btn', onclick: () => startTimer('urgent') }, `Start an urgent block (${TIMER.urgent.start} min)`));
+
+  const friday = today().getDay() === 5 && !state.reviews.some(r => r.week === key(mondayOf(today())))
+    ? [h('div', { class: 'card' },
+      h('strong', {}, "It's Friday"),
+      h('p', { class: 'muted' }, '20 minutes for your weekly review, in 5 questions.'),
+      h('button', { class: 'btn', onclick: () => showTab('bilan', 'review') }, 'Do my review'))] : [];
+
+  document.getElementById('today').replaceChildren(head, gameCard(), ...friday,
+    ...(plan.length ? [] : [h('p', { class: 'empty' }, 'Pick today’s tasks with the “Today” button, here or in the Tasks tab.')]),
+    slot('L', 'Big task'), slot('M', 'Medium tasks'), slot('S', 'Small tasks'),
+    ...offer('Planned for another day, not done', carried),
+    ...offer('Overdue or due today', due),
+    ...offer('To do now', urgent),
+    close);
+}
+
+/* ---------- Review : la revue du vendredi, et son historique ---------- */
+function renderReview() {
+  const wk = key(mondayOf(today()));
+  const saved = state.reviews.find(r => r.week === wk);
+  if (!saved && state.reviewDraft?.week !== wk) state.reviewDraft = { week: wk, a: ['', '', '', '', ''] };
+  const cur = saved || state.reviewDraft;
+
+  // Aides tirées des données : ce qui a été coché cette semaine, ce que les projets actifs attendent
+  const checked = [state.inbox, ...state.projects.flatMap(p => p.sections)]
+    .flatMap(s => s.tasks).filter(t => t.done && t.doneAt >= wk).map(t => t.text);
+  const waiting = state.projects.filter(p => p.status === 'active' && p.waiting && !/^rien\.?$/i.test(p.waiting))
+    .map(p => `${p.name} : ${p.waiting}`);
+  const hints = { 0: ['Checked off this week', checked], 2: ['Noted in "Waiting on"', waiting] };
+  const hint = i => hints[i]?.[1].length ? h('p', { class: 'muted' },
+    `${hints[i][0]} : ${hints[i][1].join(' ; ')} `,
+    h('button', { class: 'ghost', type: 'button', onclick: () => {
+      cur.a[i] = [cur.a[i], ...hints[i][1]].filter(Boolean).join('\n');
+      save();
+    } }, 'Copy into my answer')) : null;
+
+  const formCard = h('div', { class: 'card stack' },
+    h('strong', {}, `Weekly review, week ${isoWeek(today())}`),
+    h('p', { class: 'muted' }, saved
+      ? `Saved on ${shortDate(saved.date)}, you can still complete it.`
+      : '20 minutes, every Friday: look back at the week that is ending, then prepare the next one.'),
+    QUESTIONS.map((q, i) => h('div', { class: 'q' },
+      h('b', {}, `${i + 1}. ${q}`),
+      hint(i),
+      bind('textarea', cur.a, i, { class: 'small', 'aria-label': q }))),
+    h('button', { class: 'btn', onclick: () => {
+      if (!saved) { cur.date = key(today()); state.reviews.unshift(cur); delete state.reviewDraft; }
+      save();
+      toast('Review saved.');
+    } }, saved ? 'Update review' : 'Save review'));
+
+  const past = state.reviews.filter(r => r !== saved);
+  document.getElementById('review').replaceChildren(formCard, ...(past.length ? [h('div', { class: 'card' },
+    h('strong', {}, `Previous reviews (${past.length})`),
+    h('ul', { class: 'secs' }, past.map(r => h('li', {}, h('details', foldable('rev-' + r.week, { class: 'grow' }),
+      h('summary', { class: 'row' },
+        h('span', { class: 'grow' }, `Week ${isoWeek(new Date(r.week + 'T00:00'))}`),
+        h('span', { class: 'muted' }, `revue du ${shortDate(r.date)}`)),
+      QUESTIONS.map((q, i) => fact(q, r.a[i] || 'No answer')))))))] : []));
+}
+
+/* ---------- Nouvelle tâche : tout se choisit ou se crée dans le formulaire ----------
+   Nom, catégorie (du projet), projet, section, contexte. Un élément absent se crée sur place
+   via son option « + … » : il est ajouté aux projets, aux sections ou aux contextes. */
+function newTaskForm() {
+  const actives = () => state.projects.filter(p => p.status === 'active').length;
+  const typeSel = picker('type', [...typeOptions(), ['__new', '+ New category…']], state.types[0]?.id, 'Project category');
+  const projSel = h('select', { name: 'project', 'aria-label': 'Projet' },
+    h('option', { value: 'inbox' }, state.inbox.name),
+    state.projects.map(p => h('option', { value: p.id }, p.name)),
+    h('option', { value: '__new' }, '+ New project…'));
+  const secSel = h('select', { name: 'section', 'aria-label': 'Section' });
+  const fillSections = projId => {
+    const p = state.projects.find(x => x.id === projId);
+    const opts = p
+      ? (p.sections.length ? p.sections.map(s => h('option', { value: s.id }, s.name)) : [h('option', { value: 'none' }, 'No section')])
+      : [h('option', { value: 'inbox' }, state.inbox.name)];
+    secSel.replaceChildren(...opts, ...(p ? [h('option', { value: '__new' }, '+ New section…')] : []));
+  };
+  fillSections('inbox');
+  const newOpt = (sel, value, label) => {
+    sel.insertBefore(h('option', { value }, label), sel.querySelector('option[value="__new"]'));
+    sel.value = value;
+  };
+  typeSel.addEventListener('change', () => {
+    if (typeSel.value !== '__new') return;
+    typeSel.value = state.types[0]?.id;
+    askName(typeSel, 'Category name', v => {
+      const c = { id: uid(), name: v };
+      state.types.push(c);
+      persist();
+      newOpt(typeSel, c.id, c.name);
+    });
+  });
+  projSel.addEventListener('change', () => {
+    if (projSel.value === '__new') {
+      projSel.value = 'inbox';
+      return askName(projSel, 'Nom du nouveau projet', name => {
+        const p = { id: uid(), name, status: actives() < MAX_ACTIVE ? 'active' : 'waiting', type: typeSel.value || state.types[0]?.id,
+          due: '', sections: [], triggers: [], tools: [], answers: {} };
+        state.projects.push(p);
+        persist();
+        newOpt(projSel, p.id, p.name);
+        fillSections(p.id);
+      });
+    }
+    fillSections(projSel.value);
+  });
+  secSel.addEventListener('change', () => {
+    if (secSel.value !== '__new') return;
+    const p = state.projects.find(x => x.id === projSel.value);
+    if (!p) return (secSel.value = 'inbox');
+    secSel.value = p.sections[0]?.id || 'none';
+    askName(secSel, 'Nom de la nouvelle section', name => {
+      const s = { id: uid(), name, tasks: [] };
+      p.sections.push(s);
+      persist();
+      secSel.querySelector('option[value="none"]')?.remove();
+      newOpt(secSel, s.id, s.name);
+    });
+  });
+  return form(f => {
+    const text = f.elements.text.value.trim();
+    const hit = places().find(x => x.s.id === f.elements.section.value);
+    if (!text || !hit) return toast(text ? 'Choose a section.' : 'Write the task name.');
+    hit.s.tasks.push({ id: uid(), text, done: false });
+    save();
+    document.querySelector('#tasks input[name=text]').focus();
+  },
+    h('input', { type: 'text', name: 'text', class: 'grow', placeholder: 'Task name', maxlength: 120, 'aria-label': 'Task name' }),
+    typeSel, projSel, secSel,
+    h('button', { class: 'btn' }, 'Add'));
+}
+
+/* ---------- Tasks : toutes les tâches, à plat ---------- */
+function renderTasks() {
+  const all = tasks();
+  const flat = all.map(x => x.t), done = all.filter(x => x.t.done);
+  const estimate = flat.reduce((n, t) => n + (t.mins || 0), 0);
+  const inbox = all.filter(x => x.p.inbox && !x.t.done && ctxOk(x.t)), open = all.filter(x => !x.p.inbox && !x.t.done && ctxOk(x.t));
+
+  const summary = h('div', { class: 'card row' },
+    h('div', { class: 'ring', role: 'img', 'aria-label': `${pctOf(flat)}% of tasks done` }, `${pctOf(flat)}%`),
+    h('div', { class: 'grow' },
+      h('strong', {}, 'Avancement'),
+      h('div', { class: 'muted' }, all.length ? `${done.length} of ${all.length} done${estimate ? ` · ${hm(estimate)} estimated in total` : ''}` : 'No tasks')));
+
+  const add = h('div', { class: 'card' }, newTaskForm());
+
+  const list = (label, items, hint) => h('div', { class: 'card' },
+    h('strong', {}, `${label} (${items.length})`),
+    hint && h('p', { class: 'note' }, hint),
+    h('ul', { class: 'tasks' }, items.map(x => taskItem(x.s, x.t, hint ? null : placeLabel(x)))));
+
+  // Filtre par contexte : seulement les tâches qui correspondent à ton état du moment
+
+  document.getElementById('tasks').replaceChildren(summary, add, taskFinder(), taskLibraryCard(), ...([
+    ...(inbox.length ? [list(INBOX.name, inbox, 'Sort into a section: click the pencil.')] : []),
+    ...(open.length ? [list('To do', open.sort(byUrgency))] : []),
+    ...(done.length ? [list('Done', done)] : []),
+  ]));
+}
+
+/* ---------- Sections : rangées par projet, avec leurs tâches ---------- */
+function sectionCard(p, s) {
+  if (editing === 's:' + s.id) return h('div', { class: 'card' }, editForm(f => {
+    const name = f.elements.name.value.trim();
+    if (!name) return;
+    s.name = name;
+    const dest = state.projects.find(x => x.id === f.elements.dest.value);
+    if (dest && dest !== p) { p.sections = p.sections.filter(x => x !== s); dest.sections.push(s); }
+    editing = null;
+    save();
+  },
+    h('input', { type: 'text', name: 'name', class: 'grow', value: s.name, maxlength: 60, 'aria-label': 'Nom de la section', 'data-edit': true }),
+    picker('dest', state.projects.map(x => [x.id, x.name]), p.id, 'Move the section to project'),
+    arrows(p.sections, s)));
+
+  return h('div', { class: 'card' },
+    h('div', { class: 'proj-head' },
+      h('h3', { class: 'grow small' }, s.name),
+      recurButton(p, { mode: 'section', name: s.name, tasks: s.tasks.map(t => t.text) }, `section ${s.name}`),
+      editButton('s:' + s.id, `Edit section ${s.name}`),
+      h('button', {
+        class: 'icon', 'aria-label': `Delete section ${s.name}`,
+        onclick: () => {
+          if (s.tasks.length && !confirm(`Delete the section "${s.name}" and its ${plural(s.tasks.length, 'task')}?`)) return;
+          p.sections = p.sections.filter(x => x !== s); save();
+        },
+      }, '×')),
+    progress(s.tasks, 'No tasks'),
+    toolPanel(s, 'section', 'cette'),
+    h('ul', { class: 'tasks' }, s.tasks.map(t => taskItem(s, t))),
+    form(f => {
+      const text = f.elements.task.value.trim();
+      if (!text) return;
+      s.tasks.push({ id: uid(), text, done: false });
+      save();
+      document.querySelector(`[data-task-for="${s.id}"]`).focus();
+    },
+      h('input', { type: 'text', name: 'task', class: 'grow', placeholder: 'Add a task', maxlength: 120, 'aria-label': `New task in ${s.name}`, 'data-task-for': s.id }),
+      h('button', { class: 'btn' }, 'Add')));
+}
+
+function renderSections() {
+  const add = h('div', { class: 'card' }, state.projects.length
+    ? form(f => {
+        const name = f.elements.name.value.trim();
+        pickedProject = f.elements.project.value;
+        const p = state.projects.find(x => x.id === pickedProject);
+        if (!name || !p) return;
+        p.sections.push({ id: uid(), name, tasks: [] });
+        save();
+        document.querySelector('#sections input[name=name]').focus();
+      },
+        h('input', { type: 'text', name: 'name', class: 'grow', placeholder: 'New section', maxlength: 60, 'aria-label': 'New section' }),
+        picker('project', state.projects.map(p => [p.id, p.name]), pickedProject, 'Projet de la section'),
+        h('button', { class: 'btn' }, 'Add'))
+    : h('p', { class: 'empty' }, 'Create a project first, in the Projects tab.'));
+
+  const groups = state.projects.filter(p => live(p).length).flatMap(p =>
+    [h('h2', { class: 'group' }, p.name), ...live(p).map(s => sectionCard(p, s))]);
+
+  // Les déclencheurs ne se créent que depuis une section ou une tâche (bouton « Récur. ») ; on les gère ici
+  const recurring = state.projects.filter(p => p.triggers?.length).map(p => h('div', { class: 'card' },
+    h('strong', {}, `Recurrences · ${p.name}`),
+    h('ul', { class: 'secs' }, p.triggers.map(tr => h('li', {},
+      h('span', {}, triggerLabel(tr)),
+      h('button', { class: 'icon', 'aria-label': `Delete recurrence ${triggerLabel(tr)}`,
+        onclick: () => { p.triggers = p.triggers.filter(x => x !== tr); save(); } }, '×'))))));
+  document.getElementById('sections').replaceChildren(add, ...recurring,
+    ...(groups.length || !state.projects.length ? groups : [h('p', { class: 'empty' }, 'No sections yet.')]));
+}
+
+/* ---------- Projects : vue d'ensemble ---------- */
+function projectCard(p) {
+  const all = live(p).flatMap(s => s.tasks);
+  const left = all.length - doneCount(all);
+  const archived = p.sections.filter(s => s.archived);
+  const late = p.due && p.status !== 'done' && p.due < key(new Date());
+
+  const meta = [
+    typeName(p.type),
+    p.due && `Due: ${fmt(new Date(p.due + 'T00:00'), { day: 'numeric', month: 'long', year: 'numeric' })}${late ? ' (overdue)' : ''}`,
+  ].filter(Boolean).join(' · ');
+
+  return h('div', { class: 'card' },
+    editing === 'p:' + p.id ? editForm(f => {
+      const name = f.elements.name.value.trim();
+      if (!name) return;
+      Object.assign(p, {
+        name, due: f.elements.due.value, type: f.elements.type.value,
+        deliverable: f.elements.deliverable.value.trim(), next: f.elements.next.value.trim(), waiting: f.elements.waiting.value.trim(),
+        where: f.elements.where.value.trim(), block: f.elements.block.value.trim(),
+      });
+      editing = null;
+      save();
+    },
+      h('input', { type: 'text', name: 'name', class: 'grow', value: p.name, maxlength: 80, 'aria-label': 'Nom du projet', 'data-edit': true }),
+      h('input', { type: 'date', name: 'due', value: p.due || '', 'aria-label': 'Due date (optional)', title: 'Due date (optional)' }),
+      picker('type', typeOptions(), p.type, 'Type de projet'),
+      h('input', { type: 'text', name: 'deliverable', class: 'grow', value: p.deliverable || '', placeholder: 'Expected deliverable', maxlength: 120, 'aria-label': 'Expected deliverable' }),
+      h('input', { type: 'text', name: 'where', class: 'grow', value: p.where || '', placeholder: 'Where I am', maxlength: 200, 'aria-label': 'Where I am' }),
+      h('input', { type: 'text', name: 'block', class: 'grow', value: p.block || '', placeholder: 'What is blocking', maxlength: 200, 'aria-label': 'What is blocking' }),
+      h('input', { type: 'text', name: 'next', class: 'grow', value: p.next || '', placeholder: 'Next action (30 min max, starts with a verb)', maxlength: 120, 'aria-label': 'Next action' }),
+      h('input', { type: 'text', name: 'waiting', class: 'grow', value: p.waiting || '', placeholder: 'Waiting on what, from whom', maxlength: 120, 'aria-label': 'What I am waiting for, and from whom' }))
+    : h('div', { class: 'proj-head' },
+      h('div', { class: 'grow' },
+        h('h3', {}, p.name),
+        h('span', { class: 'muted' + (late ? ' late' : '') }, meta)),
+      h('select', { 'aria-label': 'Statut', onchange: e => { p.status = e.target.value; save(); } },
+        STATUSES.map(([v, l]) => h('option', { value: v, selected: p.status === v }, l))),
+      editButton('p:' + p.id, `Edit project ${p.name}`),
+      h('button', {
+        class: 'icon', 'aria-label': `Delete ${p.name}`,
+        onclick: () => { if (confirm(`Delete the project "${p.name}", its sections and its tasks?`)) { state.projects = state.projects.filter(x => x !== p); save(); } },
+      }, '×')),
+    projectTools(p),
+    [['Deliverable', p.deliverable], ['Where I am', p.where], ['Next action', p.next], ['Blocked by', p.block], ['Waiting on', p.waiting]]
+      .filter(([, v]) => v).map(([l, v]) => fact(l, v)),
+    p.status === 'active' && !p.next
+      ? h('p', { class: 'note' }, 'No next action: add one with the pencil (30 min at most, starting with a verb).') : null,
+    progress(all, 'No tasks'),
+    all.length ? h('p', { class: 'note' }, left ? `${plural(left, 'task')} left` : 'All done!') : null,
+    live(p).length
+      ? h('ul', { class: 'secs' }, live(p).map(s => h('li', {},
+          h('details', foldable(s.id, { class: 'grow' }),
+            h('summary', { class: 'row' },
+              h('span', { class: 'grow' }, s.name),
+              h('span', { class: 'muted' }, `${doneCount(s.tasks)}/${s.tasks.length}`),
+              recurButton(p, { mode: 'section', name: s.name, tasks: s.tasks.map(t => t.text) }, `section ${s.name}`),
+              h('button', { class: 'icon', type: 'button', 'aria-label': `Delete section ${s.name}`,
+                onclick: e => { e.preventDefault(); e.stopPropagation(); deleteSection(p, s); } }, '×')),
+            toolPanel(s, 'section', 'cette'),
+            h('ul', { class: 'tasks' }, s.tasks.map(t => taskItem(s, t))),
+            form(f => {
+              const text = f.elements.task.value.trim();
+              if (!text) return;
+              s.tasks.push({ id: uid(), text, done: false });
+              save();
+              document.querySelector(`[data-ptask="${s.id}"]`).focus();
+            },
+              h('input', { type: 'text', name: 'task', class: 'grow', placeholder: 'Add a task', maxlength: 120, 'aria-label': `New task in ${s.name}`, 'data-ptask': s.id }),
+              h('button', { class: 'btn' }, 'Add'))))))
+      : null,
+    h('div', { class: 'add-sec' }, form(f => {
+      const name = f.elements.section.value.trim();
+      if (!name) return;
+      const s = { id: uid(), name, tasks: [] };
+      p.sections.push(s);
+      openIds.add(s.id); // on ouvre la nouvelle section pour y saisir ses tâches
+      save();
+      document.querySelector(`[data-ptask="${s.id}"]`).focus();
+    },
+      h('input', { type: 'text', name: 'section', class: 'grow', placeholder: 'Add a section', maxlength: 60, 'aria-label': `New section in ${p.name}` }),
+      h('button', { class: 'btn' }, 'Add'))),
+    archived.length ? h('details', foldable('arc-' + p.id, { class: 'archives' }),
+      h('summary', {}, `Archives (${plural(archived.length, 'section')} done)`),
+      h('ul', { class: 'secs' }, archived.map(s => h('li', {},
+        h('span', {}, `${s.name} · ${plural(s.tasks.length, 'task')}, done on ${shortDate(s.doneAt)}`),
+        h('button', { class: 'ghost', onclick: () => { s.archived = false; s.doneAt = key(today()); save(); } }, 'Restaurer'))))) : null,
+  );
+}
+
+function renderProjects() {
+  const actives = state.projects.filter(p => p.status === 'active');
+  // Nouveau projet : nom, catégorie, échéance facultative, outils liés, puis création
+  const linked = h('details', foldable('newproj-tools', { class: 'linked' }),
+    h('summary', {}, 'Linked tools (optional)'),
+    [...new Set(allTools().map(t => t.cat))].map(c => h('div', { class: 'cat' },
+      h('strong', {}, c),
+      allTools().filter(t => t.cat === c).map(t => h('label', { class: 'chk' },
+        h('input', { type: 'checkbox', name: 'tool', value: t.id }), ` ${t.name}`)))));
+  const add = h('div', { class: 'card' }, form(f => {
+    const name = f.elements.name.value.trim();
+    if (!name) return;
+    // un nouveau projet est actif tant qu'il reste de la place, sinon il attend
+    const status = actives.length < MAX_ACTIVE ? 'active' : 'waiting';
+    const tools = [...f.querySelectorAll('input[name=tool]:checked')].map(i => i.value);
+    state.projects.push({ id: uid(), name, status, type: f.elements.type.value, due: f.elements.due.value, sections: [], triggers: [], tools, answers: {} });
+    openIds.delete('newproj-tools');
+    save();
+  },
+    h('input', { type: 'text', name: 'name', class: 'grow', placeholder: 'Nom du projet', maxlength: 80, 'aria-label': 'Nom du projet' }),
+    picker('type', typeOptions(), state.types[0]?.id, 'Project category'),
+    h('input', { type: 'date', name: 'due', 'aria-label': 'Due date (optional)', title: 'Due date (optional)' }),
+    linked,
+    h('button', { class: 'btn' }, 'Create project')));
+
+  const warn = actives.length > MAX_ACTIVE ? h('div', { class: 'card warn' },
+    h('strong', {}, `${actives.length} projets actifs, ${MAX_ACTIVE} au maximum`),
+    h('p', { class: 'muted' }, 'Put one on hold to keep a workload you can sustain:'),
+    h('div', { class: 'row' }, actives.map(p =>
+      h('button', { class: 'ghost', onclick: () => { p.status = 'waiting'; save(); } }, `${p.name} → en attente`)))) : null;
+
+  const groups = STATUSES.flatMap(([v, label]) => {
+    const list = state.projects.filter(p => p.status === v);
+    return list.length ? [h('h2', { class: 'group ' + v }, `${label} (${list.length})`), ...list.map(projectCard)] : [];
+  });
+
+  // Routine de recherche active du sprint 4 : un projet récurrent, une tâche par jour de semaine
+  if (!state.projects.some(p => p.routine)) add.append(h('button', { class: 'ghost', onclick: () => {
+    state.projects.push({
+      id: uid(), name: 'Recherche active', status: 'recurring', type: 'internal', due: '', routine: true, sections: [],
+      triggers: ROUTINE.map(([day, task]) => ({
+        id: uid(), mode: 'tasks', freq: 'weekly', days: [day], dom: 1, name: '', tasks: [task],
+        anchor: key(today()), lastRun: key(addDays(today(), -1)),
+      })),
+    });
+    runTriggers();
+    save();
+  } }, 'Create my active-search routine (Monday to Friday)'));
+
+  document.getElementById('projects').replaceChildren(add, libraryCard(), settingsCard(), ...(warn ? [warn] : []),
+    ...(groups.length ? groups : [h('p', { class: 'empty' }, 'No projects yet.')]));
+}
+
+/* ---------- Calendar : échéances, jours prévus et tâches faites, mois par mois ---------- */
+let calMonth = new Date(today().getFullYear(), today().getMonth(), 1);
+let calDay = key(today());
+function renderCalendar() {
+  const root = document.getElementById('calendar');
+  const items = {};
+  const add = (k, it) => { if (k) (items[k] ||= []).push(it); };
+  for (const { p, s, t } of tasks()) {
+    const where = placeLabel({ p, s });
+    add(t.due, { kind: 'due', text: t.text, done: !!t.done, where });
+    add(t.today, { kind: 'planned', text: t.text, done: !!t.done, where });
+    if (t.done && t.doneAt) add(t.doneAt, { kind: 'done', text: t.text, done: true, where });
+  }
+  const first = calMonth;
+  const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+  const lead = (first.getDay() + 6) % 7; // la semaine commence le lundi
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push(h('div', { class: 'cell empty' }));
+  for (let d = 1; d <= days; d++) {
+    const k = key(new Date(first.getFullYear(), first.getMonth(), d));
+    const list = items[k] || [];
+    cells.push(h('button', {
+      class: 'cell' + (k === key(today()) ? ' now' : '') + (k === calDay ? ' sel' : ''), type: 'button',
+      'aria-label': `${fmt(new Date(k + 'T00:00'), { weekday: 'long', day: 'numeric', month: 'long' })}, ${plural(list.length, 'item')}`,
+      onclick: () => { calDay = k; renderCalendar(); },
+    }, h('span', { class: 'num' }, String(d)), list.length ? h('span', { class: 'count' }, String(list.length)) : null));
+  }
+  const dayItems = items[calDay] || [];
+  const kindLabel = { due: 'due', planned: 'planned', done: 'done' };
+  root.replaceChildren(
+    h('div', { class: 'toolbar' },
+      h('button', { class: 'ghost', 'aria-label': 'Previous month', onclick: () => { calMonth = new Date(first.getFullYear(), first.getMonth() - 1, 1); renderCalendar(); } }, '‹'),
+      h('strong', {}, fmt(first, { month: 'long', year: 'numeric' })),
+      h('button', { class: 'ghost', 'aria-label': 'Next month', onclick: () => { calMonth = new Date(first.getFullYear(), first.getMonth() + 1, 1); renderCalendar(); } }, '›')),
+    h('div', { class: 'grid-head' }, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => h('span', {}, d))),
+    h('div', { class: 'grid' }, cells),
+    h('div', { class: 'card' },
+      h('strong', {}, fmt(new Date(calDay + 'T00:00'), { weekday: 'long', day: 'numeric', month: 'long' })),
+      dayItems.length
+        ? h('ul', { class: 'secs' }, dayItems.map(it => h('li', {},
+          h('span', { class: it.done ? 'done' : '' }, it.text),
+          h('small', { class: 'ctx' }, ` ${kindLabel[it.kind]} · ${it.where}`))))
+        : h('p', { class: 'empty' }, 'Nothing scheduled this day.')));
+}
+
+/* ---------- Week : bilan de la semaine et audit des 168 heures ---------- */
+function renderWeek() {
+  const mon = addDays(mondayOf(today()), weekOffset * 7);
+  const days = [...Array(7)].map((_, i) => addDays(mon, i)), keys = days.map(key);
+  const inWeek = k => !!k && k >= keys[0] && k <= keys[6];
+  const dayLabel = d => fmt(d, { weekday: 'short', day: 'numeric' });
+  const stat = (label, value, max, text, soft) => h('div', { class: 'stat' },
+    h('span', {}, label),
+    h('div', { class: 'bar' + (soft ? ' soft' : '') }, h('i', { style: `width:${max ? Math.round(value / max * 100) : 0}%` })),
+    h('span', {}, text));
+
+  // Tâches terminées (le jour est noté au moment où on coche ; les anciennes tâches cochées n'en ont pas)
+  const groups = [[INBOX.name, state.inbox.tasks],...state.projects.map(p => [p.name, p.sections.flatMap(s => s.tasks)])];
+  const done = groups.flatMap(([proj, list]) => list.filter(t => t.done && inWeek(t.doneAt)).map(t => ({ t, proj })));
+  const perDay = keys.map(k => done.filter(x => x.t.doneAt === k).length);
+  const perProj = [...new Set(done.map(x => x.proj))].map(p => [p, done.filter(x => x.proj === p).length]).sort((a, b) => b[1] - a[1]);
+
+  // Temps mesuré par les minuteurs
+  const log = state.log.filter(e => inWeek(e.date));
+  const sum = (list, kind) => list.filter(e => !kind || e.kind === kind).reduce((n, e) => n + e.mins, 0);
+  const focus = sum(log, 'focus'), urgent = sum(log, 'urgent'), tracked = focus + urgent, total = 168 * 60;
+  const projTime = [...new Set(log.map(e => e.proj || 'No project'))]
+    .map(p => [p, sum(log.filter(e => (e.proj || 'No project') === p))]).sort((a, b) => b[1] - a[1]);
+
+  // Rituels
+  const ritual = f => keys.filter(k => state.days[k]?.[f]).length;
+  const dots = (label, f) => h('p', { class: 'dots', 'aria-label': `${label}: ${plural(ritual(f), 'day')} out of 7` },
+    h('b', {}, label), keys.map(k => state.days[k]?.[f] ? '●' : '○').join(' '));
+
+  // Précision des estimations
+  const timed = done.filter(x => x.t.mins && x.t.spent);
+  const est = timed.reduce((n, x) => n + x.t.mins, 0), real = timed.reduce((n, x) => n + x.t.spent, 0);
+
+  const summary = [
+    `Week ${isoWeek(mon)}`,
+    `Tasks done: ${done.length}${perProj.length ? ` (${perProj.map(([p, n]) => `${p} ${n}`).join(', ')})` : ''}`,
+    `Time tracked: focus ${hm(focus)}, urgent ${hm(urgent)}`,
+    `Rituals: start ${ritual('start')}/7, close ${ritual('close')}/7`,
+  ].join('\n');
+  const box = h('textarea', { class: 'small', readonly: true, 'aria-label': 'Summary as text' }, summary);
+
+  const nav = h('div', { class: 'card' },
+    h('div', { class: 'toolbar' },
+      h('button', { class: 'ghost', 'aria-label': 'Previous week', onclick: () => { weekOffset--; render(); } }, '‹'),
+      h('strong', {}, `Week ${isoWeek(mon)} · ${shortDate(keys[0])} to ${shortDate(keys[6])}`),
+      h('button', { class: 'ghost', 'aria-label': 'Next week', disabled: weekOffset >= 0, onclick: () => { weekOffset++; render(); } }, '›')),
+    weekOffset ? h('button', { class: 'ghost', onclick: () => { weekOffset = 0; render(); } }, 'Back to this week') : null);
+
+  document.getElementById('week').replaceChildren(nav,
+    h('div', { class: 'card' },
+      h('strong', {}, `Tasks done (${done.length})`),
+      days.map((d, i) => stat(dayLabel(d), perDay[i], Math.max(...perDay, 1), String(perDay[i]))),
+      perProj.length ? h('p', { class: 'note' }, 'By project') : h('p', { class: 'note' }, 'Nothing checked off this week.'),
+      perProj.map(([p, n]) => stat(p, n, perProj[0][1], String(n)))),
+    h('div', { class: 'card' },
+      h('strong', {}, 'Rituels'),
+      dots('Start', 'start'), dots('Close', 'close'),
+      h('p', { class: 'muted' }, `Start ${ritual('start')}/7 · Close ${ritual('close')}/7`)),
+    h('div', { class: 'card' },
+      h('strong', {}, 'Audit des 168 heures'),
+      stat('Focus', focus, total, hm(focus)), stat('Urgence', urgent, total, hm(urgent)),
+      stat('Not tracked', total - tracked, total, hm(total - tracked), true),
+      h('p', { class: 'muted' }, 'Only time tracked by timers is counted: start a focus or an urgent block to fill the audit.'),
+      projTime.length ? h('p', { class: 'note' }, 'Time by project') : null,
+      projTime.map(([p, m]) => stat(p, m, projTime[0][1], hm(m)))),
+    h('div', { class: 'card' },
+      h('strong', {}, 'Estimate accuracy'),
+      timed.length
+        ? h('p', { class: 'fact' }, `${plural(timed.length, 'task')} estimated and timed: ${hm(real)} spent for ${hm(est)} planned (${Math.round(real / est * 100)}%).`)
+        : h('p', { class: 'muted' }, 'Estimate a task\'s duration, time it with "Focus", then tick it off: the comparison will appear here.')),
+    h('div', { class: 'card stack' },
+      h('strong', {}, 'Summary as text'),
+      box,
+      h('button', { class: 'ghost', onclick: async () => {
+        try { await navigator.clipboard.writeText(summary); toast('Summary copied.'); }
+        catch { box.select(); toast('Text selected: copy it with Ctrl+C.'); }
+      } }, 'Copier')));
+}
+
+/* ---------- Général ---------- */
+function render() {
+  renderToday(); renderTasks(); renderSections(); renderProjects(); renderReview(); renderWeek(); renderCalendar(); renderTimer();
+  document.querySelector('section:not([hidden]) [data-edit]')?.focus(); // champ en cours de modification
+}
+
+
+// Sauvegarde dans un fichier, et restauration
+function importData(data) {
+  if (!data || !Array.isArray(data.projects)) throw new Error('format');
+  state = normalize(data);
+  editing = null;
+  save();
+}
+document.getElementById('export').addEventListener('click', () => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+  h('a', { href: url, download: `mes-projets-${key(new Date())}.json` }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+const file = document.getElementById('file');
+document.getElementById('import').addEventListener('click', () => file.click());
+file.addEventListener('change', async () => {
+  const picked = file.files[0];
+  if (!picked) return;
+  try {
+    const data = JSON.parse(await picked.text());
+    if (!Array.isArray(data?.projects)) throw new Error('format');
+    if (confirm(`Replace all current data with the file's data (${plural(data.projects.length, 'project')})?`)) importData(data);
+  } catch { alert('This file is not a valid backup.'); }
+  file.value = '';
+});
+
+// Bannière du haut de page : plusieurs dessins, choisis avec le pinceau. « trees » est le défaut de la page.
+const BANNER_URL = inner => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='360' height='60' viewBox='0 0 360 60'>${inner}</svg>`)}")`;
+const BANNERS = [
+  { id: 'trees', name: 'Fir trees and cabins (default)', css: null,
+    preview: BANNER_URL(`<g fill='none' stroke='#111' stroke-width='1.2'><path d='M20 52 L30 26 L40 52 M30 52 V58 M70 52 L80 22 L90 52 M80 52 V58 M120 52 L128 30 L136 52'/><path d='M0 56 q20 -4 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0'/></g>`) },
+  { id: 'hills', name: 'Collines', css: BANNER_URL(`<path d='M0 50 L30 22 L50 40 L80 12 L110 44 L140 26 L170 50 L200 18 L230 46 L260 24 L290 50 L320 30 L360 48' fill='none' stroke='#111' stroke-width='1.2'/>`),
+    preview: null },
+  { id: 'houses', name: 'Maisons', css: BANNER_URL(`<g fill='none' stroke='#111' stroke-width='1.2'><path d='M20 52 V30 L32 20 L44 30 V52 M26 52 V42 H38 V52 M70 52 V34 L84 22 L98 34 V52 M120 52 V28 H150 V52 M140 28 V16 H146 V24 M200 52 V40 L212 30 L224 40 V52 M250 52 V36 L262 26 L274 36 V52 M300 52 V44 H330 V52'/></g>`),
+    preview: null },
+  { id: 'stars', name: 'Stars', css:BANNER_URL(`<g fill='#111'><circle cx='20' cy='18' r='1.6'/><circle cx='60' cy='40' r='1.2'/><circle cx='110' cy='14' r='1.8'/><circle cx='150' cy='46' r='1.2'/><circle cx='200' cy='22' r='1.6'/><circle cx='260' cy='42' r='1.4'/><circle cx='310' cy='16' r='1.8'/><circle cx='340' cy='48' r='1.2'/></g><path d='M175 30 l3 8 8 0 -6 5 2 8 -7 -5 -7 5 2 -8 -6 -5 8 0z' fill='none' stroke='#111' stroke-width='1'/>`),
+    preview: null },
+  { id: 'waves', name: 'Vagues', css: BANNER_URL(`<g fill='none' stroke='#111' stroke-width='1.2'><path d='M0 22 q15 -10 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0'/><path d='M0 42 q15 -10 30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0 t30 0'/></g>`),
+    preview: null },
+  { id: 'none', name: 'None', css: 'none', preview: 'none' },
+];
+function applyBanner() {
+  const page = document.querySelector('.page');
+  const b = BANNERS.find(x => x.id === state.banner) || BANNERS[0];
+  if (!b.css) { // défaut : la bannière d'origine, définie dans la feuille de style
+    page.style.backgroundImage = page.style.backgroundRepeat = page.style.backgroundPosition = page.style.backgroundSize = '';
+    return;
+  }
+  page.style.backgroundImage = b.css;
+  page.style.backgroundRepeat = 'repeat-x';
+  page.style.backgroundPosition = '64px 28px';
+  page.style.backgroundSize = 'auto 58px';
+}
+// Fond de la page : l'image choisie parmi les fonds enregistrés (state.backgrounds)
+function applyBackground() {
+  // Une couche sombre sous la photo garde le texte lisible
+  const file = state.backgroundUrl || '';
+  document.body.style.backgroundImage = file ? `linear-gradient(rgba(17,17,17,.6), rgba(17,17,17,.6)), url("${file}")` : '';
+  document.body.style.backgroundSize = file ? 'cover' : '';
+  document.body.style.backgroundPosition = file ? 'center' : '';
+  document.body.style.backgroundAttachment = file ? 'fixed' : '';
+}
+
+// Fenêtre du pinceau : un aperçu par bannière, celle en cours est entourée
+function bannerPicker() {
+  let dlg = document.getElementById('banner-dialog');
+  if (!dlg) { dlg = h('dialog', { id: 'banner-dialog', class: 'banner-picker', 'aria-label': 'Page banner' }); document.body.append(dlg); }
+  const current = state.banner || 'trees';
+  dlg.replaceChildren(
+    h('strong', {}, 'Page banner'),
+    h('p', { class: 'muted' }, 'Pick a design. It applies right away.'),
+    h('div', { class: 'opts' }, BANNERS.map(b => h('button', {
+      type: 'button', class: 'opt', 'aria-pressed': String(b.id === current), 'aria-label': b.name,
+      style: `background-image: ${b.preview || b.css || 'none'}`,
+      onclick: () => { state.banner = b.id; persist(); applyBanner(); bannerPicker(); },
+    }, h('span', {}, b.name)))),
+    h('strong', {}, 'Page background'),
+    h('form', { class: 'row', onsubmit: async e => {
+      e.preventDefault();
+      const v = e.target.elements.url.value.trim();
+      if (!/^https:\/\//.test(v)) return toast('The link must start with https://');
+      // Vérifie que le lien est bien une image (et non une page web) avant de l'enregistrer
+      const works = await new Promise(res => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = v; });
+      if (!works) return toast('This link is not an image. On Unsplash: right-click the photo › Copy image address.');
+      state.backgrounds = [...(state.backgrounds || []).filter(x => x !== v), v]; // enregistré dans la liste
+      state.backgroundUrl = v;
+      persist();
+      applyBackground();
+      bannerPicker();
+    } },
+      h('input', { type: 'text', name: 'url', class: 'grow', placeholder: 'Image link (Unsplash: right-click the photo › Copy image address)', 'aria-label': 'Background image link' }),
+      h('button', { class: 'ghost', type: 'submit' }, 'Save')),
+    ...((state.backgrounds || []).length ? [h('ul', { class: 'secs' }, state.backgrounds.map((u, i) => h('li', {},
+      h('button', { class: 'ghost', type: 'button', onclick: () => { state.backgroundUrl = u; persist(); applyBackground(); bannerPicker(); } },
+        `Background ${i + 1}${state.backgroundUrl === u ? ' · in use' : ''}`),
+      h('button', { class: 'icon', type: 'button', 'aria-label': `Delete background ${i + 1}`, onclick: () => {
+        state.backgrounds = state.backgrounds.filter(x => x !== u);
+        if (state.backgroundUrl === u) state.backgroundUrl = '';
+        persist(); applyBackground(); bannerPicker();
+      } }, '×'))))] : []),
+    ...(state.backgroundUrl ? [h('button', { class: 'ghost', type: 'button', onclick: () => { state.backgroundUrl = ''; persist(); applyBackground(); bannerPicker(); } }, 'Remove background')] : []),
+    h('button', { class: 'btn', type: 'button', onclick: () => dlg.close() }, 'Close'));
+  if (!dlg.open) dlg.showModal();
+}
+
+const tabs = [...document.querySelectorAll('.tabs button')];
+// Deux niveaux : Today | Plan (Tasks, Sections, Projects) | Bilan (Review, Week)
+const subOf = { plan: ['tasks', 'sections', 'projects'], bilan: ['review', 'week'] };
+const currentSub = { plan: 'tasks', bilan: 'review' };
+function showSub(group, id) {
+  currentSub[group] = id;
+  document.querySelectorAll(`.subtabs[data-group="${group}"] button`)
+    .forEach(b => b.setAttribute('aria-selected', String(b.dataset.sub === id)));
+  subOf[group].forEach(s => { document.getElementById(s).hidden = s !== id; });
+}
+function showTab(id, sub) {
+  tabs.forEach(x => x.setAttribute('aria-selected', String(x.dataset.tab === id)));
+  ['today', 'plan', 'bilan', 'calendar'].forEach(s => { document.getElementById(s).hidden = s !== id; });
+  if (subOf[id]) showSub(id, sub || currentSub[id]);
+  scrollTo(0, 0);
+}
+tabs.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+document.querySelectorAll('.subtabs button').forEach(b =>
+  b.addEventListener('click', () => showSub(b.closest('.subtabs').dataset.group, b.dataset.sub)));
+showSub('plan', currentSub.plan);
+showSub('bilan', currentSub.bilan);
+
+const d = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+document.getElementById('page-title').textContent = d[0].toUpperCase() + d.slice(1);
+runTriggers();
+save();
+setInterval(() => { if (runTriggers()) save(); }, 36e5); // si la page reste ouverte après minuit
+setInterval(tickTimer, 1000);
+applyBanner();
+applyBackground();
+buildMusic();
+INBOX.name = state.inbox.name || INBOX.name;
+document.getElementById('brush').addEventListener('click', bannerPicker); // minuteur : décompte, et fin automatique
+</script>
+</body>
+</html>

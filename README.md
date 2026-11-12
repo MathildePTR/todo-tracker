@@ -6,4 +6,4 @@ A single-file to-do and project tracker that runs in the browser, with no server
 - **Plan**: tasks, sections and projects, with tools (SMART, GTD, Eisenhower, Kanban...) and recurrences.
 - **Review / Calendar**: weekly review, weekly stats, and a month calendar.
 
-Open `index.html` in a browser. Data is stored locally in the browser (localStorage); use *Export my data* to back it up.
+Open `index.html` in a browser (the page loads `styles.css` and `app.js` next to it). Data is stored locally in the browser (localStorage); use *Export my data* to back it up.

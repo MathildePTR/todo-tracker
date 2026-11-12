@@ -1,0 +1,13 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "habit-tracker",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".claude/static-server.js"
+      ],
+      "port": 8080
+    }
+  ]
+}

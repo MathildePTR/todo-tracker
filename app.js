@@ -115,6 +115,7 @@ function normalize(st) {
   if (!Array.isArray(st.inbox?.tasks)) st.inbox = { id: 'inbox', name: INBOX.name, tasks: [] };
   if (!st.days || typeof st.days !== 'object') st.days = {}; // rituels, jour par jour
   if (!Array.isArray(st.reviews)) st.reviews = []; // revues du vendredi
+  if (!Array.isArray(st.links)) st.links = []; // liens vers des pages externes (Paramètres)
   if (!Array.isArray(st.log)) st.log = []; // temps mesuré par les minuteurs
   st.customTools = []; // outils personnels supprimés
   if (!Array.isArray(st.contexts) || !st.contexts.length) st.contexts = CONTEXTS.slice(1).map(([id, name]) => ({ id, name }));
@@ -1335,11 +1336,12 @@ function weeklyReviewCard(mon) {
   const editing = reviewOpen === wk;
   const head = h('strong', {}, `Weekly review, week ${isoWeek(mon)}`);
   if (!editing) {
+    // Le bouton, puis les réponses en dessous
     return h('div', { class: 'card stack' }, head,
+      h('button', { class: 'btn', type: 'button', onclick: () => { reviewOpen = wk; render(); } }, saved ? 'Edit the 5 questions' : 'Fill the 5 questions'),
       saved
         ? [h('p', { class: 'muted' }, `Saved on ${shortDate(saved.date)}`), QUESTIONS.map((q, i) => fact(q, saved.a[i] || 'No answer'))]
-        : h('p', { class: 'muted' }, 'No review for this week yet.'),
-      h('button', { class: 'btn', type: 'button', onclick: () => { reviewOpen = wk; render(); } }, saved ? 'Edit the 5 questions' : 'Fill the 5 questions'));
+        : h('p', { class: 'muted' }, 'No review for this week yet.'));
   }
   return h('div', { class: 'card stack' }, head,
     QUESTIONS.map((q, i) => h('div', { class: 'q' },
@@ -2209,19 +2211,33 @@ function nextDayDialog(k) {
 
 /* ---------- Week : bilan de la semaine et audit des 168 heures ---------- */
 // Vue Semaine : les tâches prévues pour chacun des sept jours
-function weekGrid(days) {
-  const open = tasks().filter(x => !x.t.done);
-  return h('div', { class: 'card' },
-    h('strong', {}, 'Planned this week'),
-    h('div', { class: 'week-cols' }, days.map(d => {
-      const k = key(d), list = open.filter(x => x.t.today === k);
-      return h('div', { class: 'week-col' },
-        h('b', {}, fmt(d, { weekday: 'short', day: 'numeric' })),
-        list.length ? h('ul', { class: 'secs' }, list.map(x => h('li', {}, x.t.text))) : h('p', { class: 'muted' }, 'Nothing'));
-    })));
-}
 // Petit bouton « ? » : une explication courte du terme à côté
 const helpBtn = (term, text) => h('button', { class: 'icon', type: 'button', 'aria-label': `What is ${term}?`, title: `What is ${term}?`, onclick: () => popupRule(term, text) }, '?');
+// Paramètres : liens vers des pages externes (Notion, Google Calendar…), ouverts dans un nouvel onglet
+function renderLinks() {
+  const box = document.getElementById('settings');
+  if (!box) return;
+  const nameIn = h('input', { type: 'text', maxlength: 60, placeholder: 'Name, e.g. Notion', 'aria-label': 'Link name' });
+  const urlIn = h('input', { type: 'url', maxlength: 300, placeholder: 'https://…', 'aria-label': 'Link address (https)' });
+  const add = h('form', { class: 'row', onsubmit: e => {
+    e.preventDefault();
+    const name = nameIn.value.trim(), url = urlIn.value.trim();
+    if (!name) return toast('Name the link first.');
+    if (!/^https:\/\//.test(url)) return toast('The link must start with https://');
+    state.links.push({ id: uid(), name, url });
+    save();
+  } }, nameIn, urlIn, h('button', { class: 'btn', type: 'submit' }, 'Add link'));
+  box.replaceChildren(h('div', { class: 'card stack' },
+    h('strong', {}, 'Settings'),
+    h('strong', {}, 'Links'),
+    h('p', { class: 'muted' }, 'Links to the outside pages you use, such as Notion or Google Calendar. They open in a new tab.'),
+    state.links.length
+      ? h('ul', { class: 'secs' }, state.links.map(l => h('li', {},
+          h('a', { href: l.url, target: '_blank', rel: 'noopener noreferrer' }, l.name),
+          h('button', { class: 'icon', type: 'button', 'aria-label': `Remove link ${l.name}`, onclick: () => { state.links = state.links.filter(x => x !== l); save(); } }, '×'))))
+      : h('p', { class: 'empty' }, 'No link yet.'),
+    add));
+}
 // Accueil : une seule étape à la fois, selon ce qui manque
 function renderHomeNext() {
   const box = document.getElementById('home-next');
@@ -2265,20 +2281,25 @@ function renderWeek() {
 
   // Rituels
   const ritual = f => keys.filter(k => state.days[k]?.[f]).length;
-  const dots = (label, f) => h('p', { class: 'dots', 'aria-label': `${label}: ${plural(ritual(f), 'day')} out of 7` },
-    h('b', {}, label), keys.map(k => state.days[k]?.[f] ? '●' : '○').join(' '));
+  // Chaque jour se coche : un clic remplit le rond, un second clic le vide
+  const dots = (label, f) => h('div', { class: 'dots', role: 'group', 'aria-label': `${label}: ${plural(ritual(f), 'day')} out of 7` },
+    h('b', {}, label), keys.map((k, i) => h('button', { class: 'dot-btn', type: 'button', 'aria-pressed': String(!!state.days[k]?.[f]), 'aria-label': `${label} ${dayLabel(days[i])}`, title: `${label} · ${dayLabel(days[i])}`,
+      onclick: () => { const d = state.days[k] ||= {}; d[f] = !d[f]; if (!d[f]) delete d[f]; save(); } }, state.days[k]?.[f] ? '●' : '○')));
 
   // Précision des estimations
   const timed = done.filter(x => x.t.mins && x.t.spent);
   const est = timed.reduce((n, x) => n + x.t.mins, 0), real = timed.reduce((n, x) => n + x.t.spent, 0);
 
+  // La revue de la semaine, si elle est écrite, s'ajoute au résumé
+  const rv = state.reviews.find(r => r.week === key(mon));
   const summary = [
     `Week ${isoWeek(mon)}`,
     `Tasks done: ${done.length}${perProj.length ? ` (${perProj.map(([p, n]) => `${p} ${n}`).join(', ')})` : ''}`,
     `Time tracked: focus ${hm(focus)}, urgent ${hm(urgent)}`,
     `Rituals: start ${ritual('start')}/7, close ${ritual('close')}/7`,
+    ...(rv ? ['', 'Weekly review:', ...QUESTIONS.map((q, i) => `${q} ${rv.a[i] || '-'}`)] : []),
   ].join('\n');
-  const box = h('textarea', { class: 'small', readonly: true, 'aria-label': 'Summary as text' }, summary);
+  const box = h('pre', { class: 'plain-summary', 'aria-label': 'Summary as text' }, summary);
 
   const nav = h('div', { class: 'card' },
     h('div', { class: 'toolbar' },
@@ -2287,22 +2308,13 @@ function renderWeek() {
       h('button', { class: 'ghost', 'aria-label': 'Next week', disabled: weekOffset >= 0, onclick: () => { weekOffset++; render(); } }, '›')),
     weekOffset ? h('button', { class: 'ghost', onclick: () => { weekOffset = 0; render(); } }, 'Back to this week') : null);
 
-  document.getElementById('week').replaceChildren(nav, weekGrid(days), weeklyReviewCard(mon), ...prepBlocks(),
+  document.getElementById('week').replaceChildren(nav, weeklyReviewCard(mon),
     h('div', { class: 'card' },
       h('strong', {}, `Tasks done (${done.length})`),
       done.length ? null : h('p', { class: 'muted' }, 'Nothing ticked this week yet. Tick a task when it is done to see it here.'),
       days.map((d, i) => stat(dayLabel(d), perDay[i], Math.max(...perDay, 1), String(perDay[i]))),
       perProj.length ? h('p', { class: 'note' }, 'By project') : h('p', { class: 'note' }, 'Nothing checked off this week.'),
       perProj.map(([p, n]) => stat(p, n, perProj[0][1], String(n)))),
-    h('div', { class: 'card' },
-      h('strong', {}, 'Rituels'),
-      dots('Start', 'start'), dots('Close', 'close'),
-      h('p', { class: 'muted' }, `Start ${ritual('start')}/7 · Close ${ritual('close')}/7`)),
-    h('div', { class: 'card' },
-      h('strong', {}, 'Week journal'),
-      days.filter(d => dayNotes(key(d)).length).length
-        ? days.filter(d => dayNotes(key(d)).length).map(d => h('div', { class: 'reprise' }, h('b', {}, dayLabel(d)), ...dayNotes(key(d))))
-        : h('p', { class: 'muted' }, 'No notes this week yet. Write them in the end-of-day ritual.')),
     h('div', { class: 'card' },
       h('strong', {}, 'Audit des 168 heures'),
       h('p', { class: 'muted' }, `Estimated ${hm(est)} · real ${hm(real)} on ${timed.length} finished task${timed.length > 1 ? 's' : ''} with both values.`),
@@ -2311,23 +2323,18 @@ function renderWeek() {
       h('p', { class: 'muted' }, 'Only time tracked by timers is counted: start a focus or an urgent block to fill the audit.'),
       projTime.length ? h('p', { class: 'note' }, 'Time by project') : null,
       projTime.map(([p, m]) => stat(p, m, projTime[0][1], hm(m)))),
-    h('div', { class: 'card' },
-      h('strong', {}, 'Estimate accuracy'),
-      timed.length
-        ? h('p', { class: 'fact' }, `${plural(timed.length, 'task')} estimated and timed: ${hm(real)} spent for ${hm(est)} planned (${Math.round(real / est * 100)}%).`)
-        : h('p', { class: 'muted' }, 'Estimate a task\'s duration, time it with "Timer", then tick it off: the comparison will appear here.')),
     h('div', { class: 'card stack' },
       h('strong', {}, 'Summary as text'),
       box,
       h('button', { class: 'ghost', onclick: async () => {
         try { await navigator.clipboard.writeText(summary); toast('Summary copied.'); }
-        catch { box.select(); toast('Text selected: copy it with Ctrl+C.'); }
+        catch { toast('Copy is not available here. Select the text and press Ctrl+C.'); }
       } }, 'Copier')));
 }
 
 /* ---------- Général ---------- */
 function render() {
-  renderToday(); renderTasks(); renderSections(); renderProjects(); renderHomeNext(); renderWeek(); renderCalendar(); renderTimer();
+  renderToday(); renderTasks(); renderSections(); renderProjects(); renderHomeNext(); renderLinks(); renderWeek(); renderCalendar(); renderTimer();
   document.querySelector('section:not([hidden]) [data-edit]')?.focus(); // champ en cours de modification
 }
 
@@ -2517,7 +2524,7 @@ function showSub(group, id) {
 function showTab(id, sub) {
   try { localStorage.setItem('tab', id); } catch { /* stockage indisponible : pas de mémoire d'onglet */ }
   tabs.forEach(x => x.setAttribute('aria-selected', String(x.dataset.tab === id)));
-  ['home', 'today', 'plan', 'bilan', 'calendar'].forEach(s => { document.getElementById(s).hidden = s !== id; });
+  ['home', 'today', 'plan', 'bilan', 'calendar', 'settings'].forEach(s => { document.getElementById(s).hidden = s !== id; });
   if (subOf[id]) showSub(id, sub || currentSub[id]);
   scrollTo(0, 0);
 }
@@ -2527,7 +2534,7 @@ document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', 
 // Au rechargement, on rouvre l'onglet où l'on était
 try {
   const last = localStorage.getItem('tab');
-  if (last && ['home', 'today', 'plan', 'bilan', 'calendar'].includes(last)) showTab(last);
+  if (last && ['home', 'today', 'plan', 'bilan', 'calendar', 'settings'].includes(last)) showTab(last);
 } catch { /* pas de mémoire disponible */ }
 document.querySelectorAll('.subtabs button').forEach(b =>
   b.addEventListener('click', () => showSub(b.closest('.subtabs').dataset.group, b.dataset.sub)));

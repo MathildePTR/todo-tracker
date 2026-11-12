@@ -555,3 +555,21 @@
 
   /* Date de fin obligatoire : libellé avec astérisque */
   .dateField { display: inline-flex; align-items: center; gap: 8px; }
+
+  /* Icône Paramètres dans la barre du haut */
+  .settings-btn { background: none; border: 0; color: #fff; padding: 0 8px; min-height: 36px; display: inline-flex; align-items: center; cursor: pointer; flex: none; }
+  .settings-btn:hover { color: #F7EBB0; }
+
+  /* Icône Paramètres : blanche sur la barre noire */
+  .tabs .settings-btn { color: #fff; background: none; border: 0; padding: 0 10px; min-height: 36px; height: auto; display: inline-flex; align-items: center; }
+  .tabs .settings-btn[aria-selected="true"] { box-shadow: inset 0 -3px 0 #fff; }
+  #settings { padding-top: 8px; }
+  .tabs .settings-btn, .tabs .settings-btn[aria-selected="true"] { box-shadow: none; border-radius: 0; background: none; }
+
+  /* Rituels : chaque jour se coche */
+  .dots { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 6px 0; }
+  .dots b { min-width: 52px; }
+  .dot-btn { background: none; border: 0; padding: 0 4px; font-size: 1.2rem; line-height: 1; cursor: pointer; color: var(--ink); min-height: 0; }
+
+  /* Résumé de la semaine : texte brut, sans cadre */
+  .plain-summary { white-space: pre-wrap; font: inherit; color: var(--ink); margin: 8px 0 0; padding: 0; background: none; border: 0; }

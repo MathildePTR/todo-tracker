@@ -18,6 +18,7 @@
       <button role="tab" data-tab="bilan" aria-selected="false">Review</button>
       <button role="tab" data-tab="calendar" aria-selected="false">Calendar</button>
     </div>
+    <button class="icon settings-btn" type="button" data-tab="settings" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2.4" fill="currentColor"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2.4" fill="currentColor"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="7" cy="18" r="2.4" fill="currentColor"/></svg></button>
   </nav>
 
   <div class="page">
@@ -83,6 +84,7 @@
         </details>
       </article>
     </section>
+    <section id="settings" hidden></section>
     <section id="today"></section>
     <section id="plan" hidden>
       <div class="subtabs" role="tablist" data-group="plan">
@@ -96,7 +98,7 @@
     </section>
     <section id="bilan" hidden>
       <div class="subtabs" role="tablist" data-group="bilan">
-        <button role="tab" data-sub="week" aria-selected="true">Week</button>
+        <button role="tab" data-sub="week" aria-selected="true">Review</button>
       </div>
       <section id="week" hidden></section>
     </section>
